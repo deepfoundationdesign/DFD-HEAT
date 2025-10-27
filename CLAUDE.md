@@ -141,7 +141,7 @@ Where:
 - **Mesh**: MSH format from GMSH
 - **Future**: IFC import for geometry (not in MVP)
 
-### 6. 3D Modeling
+### 6. 3D Modeling and Navigation
 - Custom Qt3D viewport with Blender-like navigation
 - Qt3D entity-component system for scene management
 - Custom mesh manipulation tools
@@ -162,9 +162,148 @@ Where:
 7. Visualization
 8. Advanced features (IFC import, transient solver, etc.)
 
+## Implementation Challenges and Solutions
+
+### Qt3D Mouse Event Handling
+
+**Challenge**: Qt3DWindow captures all mouse events internally, making custom navigation controls difficult to implement.
+
+**Problem Investigation**:
+- Initial approach using QWidget::eventFilter() failed because Qt3DWindow consumes mouse events
+- QOrbitCameraController exists but has hardcoded mouse button mappings (left=move, right=rotate)
+- Cannot subclass QOrbitCameraController due to private implementation details
+- Documentation shows this is a common Qt3D limitation
+
+**Research Sources**:
+- Qt Forum discussions about overriding QOrbitCameraController behavior
+- Stack Overflow questions about Qt3DWindow mouse event handling
+- Qt3D documentation on input handling system
+
+**Solution Implemented**:
+1. **Custom Qt3DWindow Subclass**: Created `Custom3DWindow` inheriting from `Qt3DExtras::Qt3DWindow`
+2. **Override Mouse Events**: Directly override `mousePressEvent()`, `mouseMoveEvent()`, `mouseReleaseEvent()`, `wheelEvent()`
+3. **Signal-Based Communication**: Custom window emits signals (`orbitRequested`, `panRequested`, `zoomRequested`)
+4. **Blender-Style Controls**:
+   - Middle mouse + drag = Orbit camera
+   - Shift + Middle mouse + drag = Pan camera
+   - Mouse wheel = Zoom
+5. **Event Handling Logic**:
+   ```cpp
+   if (event->button() == Qt::MiddleButton) {
+       m_shiftPressed = (event->modifiers() & Qt::ShiftModifier);
+       if (m_shiftPressed) {
+           m_panning = true;
+       } else {
+           m_orbiting = true;
+       }
+   }
+   ```
+
+**Key Technical Details**:
+- Must include `<Qt3DExtras/QForwardRenderer>` for background color control
+- Use `setMouseGrabEnabled(true)` for proper mouse tracking
+- Connect signals from Custom3DWindow to ViewportController for camera manipulation
+- Fallback to Qt3DWindow default behavior for non-middle mouse events
+
+**Alternative Approaches Considered**:
+1. **Qt3D Input System**: Using QMouseDevice/QMouseHandler (more complex, QML-oriented)
+2. **Event Filter on Container**: Doesn't work due to Qt3DWindow event consumption
+3. **Modifying QOrbitCameraController**: Not possible due to private implementation
+
+**Lessons Learned**:
+- Qt3D input handling requires careful approach due to internal event processing
+- Subclassing Qt3DWindow is the most reliable method for custom mouse controls
+- Always check Qt documentation and community forums for Qt3D-specific limitations
+- Signal-slot pattern works well for decoupling input handling from camera logic
+
+This solution provides professional Blender-style navigation that feels natural to CAD users while maintaining clean architecture.
+
+### Qt3D Lighting and Materials Setup
+
+**Challenge**: Initial 3D objects appeared completely black with white background, indicating lighting/material issues.
+
+**Root Cause Analysis**:
+- Qt3D requires proper lighting setup - objects appear black without adequate lighting
+- Default Qt3D background is white, unprofessional for CAD applications
+- Basic material properties insufficient for realistic rendering
+- Need proper Phong shading model implementation
+
+**Solution Implemented**:
+
+1. **Three-Point Lighting System**:
+   ```cpp
+   // Key Light (main illumination)
+   auto *light = new Qt3DRender::QDirectionalLight();
+   light->setColor(QColor(255, 255, 255));
+   light->setIntensity(1.0f);
+   light->setWorldDirection(QVector3D(-0.5f, -1.0f, -0.5f).normalized());
+
+   // Fill Light (soften shadows)
+   auto *fillLight = new Qt3DRender::QDirectionalLight();
+   fillLight->setColor(QColor(180, 180, 200));
+   fillLight->setIntensity(0.4f);
+
+   // Rim Light (edge definition)
+   auto *rimLight = new Qt3DRender::QDirectionalLight();
+   rimLight->setColor(QColor(255, 255, 220));
+   rimLight->setIntensity(0.3f);
+   ```
+
+2. **Professional Material Properties**:
+   ```cpp
+   auto *material = new Qt3DExtras::QPhongMaterial();
+   material->setDiffuse(QColor(120, 150, 220));      // Base color
+   material->setAmbient(QColor(60, 75, 110));        // Shadow color
+   material->setSpecular(QColor(255, 255, 255));     // Highlight color
+   material->setShininess(50.0f);                    // Surface finish
+   ```
+
+3. **Dark Professional Background**:
+   ```cpp
+   // In Custom3DWindow constructor
+   defaultFrameGraph()->setClearColor(QColor(60, 60, 60));
+   ```
+
+**Key Technical Requirements**:
+- Each light must be attached to its own QEntity
+- Include `<Qt3DExtras/QForwardRenderer>` for background color access
+- Use `QDirectionalLight` for consistent lighting across scene
+- Apply complete Phong material properties (diffuse/ambient/specular/shininess)
+- Normalize light direction vectors for predictable behavior
+
+**Visual Results**:
+- Professional dark gray background (like Blender/Autodesk products)
+- Properly lit objects with realistic shading and highlights
+- Clear material differentiation between objects
+- Suitable for long CAD sessions (easier on eyes)
+
+This creates the professional appearance expected from engineering software while maintaining good performance for complex 3D scenes.
+
+## Current Status
+
+### ✅ Completed Features:
+- Qt6/Qt3D application framework with CMake build system
+- Professional MainWindow with docking panels for all FEM tools
+- Custom Blender-style 3D navigation (middle mouse orbit, shift+middle pan, wheel zoom)
+- Professional three-point lighting system with proper materials
+- Dark CAD-style background and realistic object shading
+- Comprehensive project documentation and architecture
+
+### 🔧 Technical Achievements:
+- Solved Qt3D mouse event handling through custom Qt3DWindow subclass
+- Implemented professional lighting system for realistic 3D rendering
+- Clean OOP architecture with proper separation of concerns
+- Signal-slot communication pattern for decoupled component interaction
+
+### 📊 Application State:
+The application now provides a solid foundation for FEM thermal analysis with professional-grade 3D visualization that matches the quality of commercial CAD software.
+
 ## Next Steps
-1. Resolve open questions
-2. Set up development environment
+1. Implement RGB axis lines and 1m engineering grid
+2. Create material database with DIN/EN standards
+3. Develop object creation tools for building elements
+4. Integrate GMSH for mesh generation
+5. Build FEM solver with Eigen linear algebra
 3. Create proof-of-concept for each major component
 4. Iterative development with testing
 
