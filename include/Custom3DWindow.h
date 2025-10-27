@@ -2,6 +2,7 @@
 #define CUSTOM3DWINDOW_H
 
 #include <Qt3DExtras/Qt3DWindow>
+#include <Qt3DExtras/QForwardRenderer>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QVector3D>

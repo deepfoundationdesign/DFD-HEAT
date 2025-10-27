@@ -70,8 +70,7 @@ void Viewport3D::setupScene()
     camera->setViewCenter(QVector3D(0, 0, 0));
     camera->setUpVector(QVector3D(0, 1, 0));
 
-    // Camera is now controlled by our ViewportController
-    // which handles Blender-style navigation
+    // Set background color (dark gray like Blender) - will be implemented differently
 
     // Setup scene elements
     setupLighting();
@@ -80,21 +79,29 @@ void Viewport3D::setupScene()
 
 void Viewport3D::setupLighting()
 {
-    // Main directional light
+    // Main directional light (key light)
     auto *lightEntity = new Qt3DCore::QEntity(m_rootEntity);
     auto *light = new Qt3DRender::QDirectionalLight(lightEntity);
-    light->setColor("white");
-    light->setIntensity(0.7f);
-    light->setWorldDirection(QVector3D(-1, -1, -1).normalized());
+    light->setColor(QColor(255, 255, 255));  // Pure white
+    light->setIntensity(1.0f);  // Increased intensity
+    light->setWorldDirection(QVector3D(-0.5f, -1.0f, -0.5f).normalized());
     lightEntity->addComponent(light);
 
-    // Fill light
+    // Ambient/fill light (softer, from opposite direction)
     auto *fillLightEntity = new Qt3DCore::QEntity(m_rootEntity);
     auto *fillLight = new Qt3DRender::QDirectionalLight(fillLightEntity);
-    fillLight->setColor(QColor(100, 100, 100));
-    fillLight->setIntensity(0.3f);
-    fillLight->setWorldDirection(QVector3D(1, 0.5f, 0.5f).normalized());
+    fillLight->setColor(QColor(180, 180, 200));  // Slightly blue-ish fill
+    fillLight->setIntensity(0.4f);
+    fillLight->setWorldDirection(QVector3D(0.5f, 0.5f, 1.0f).normalized());
     fillLightEntity->addComponent(fillLight);
+
+    // Add a rim light for better shape definition
+    auto *rimLightEntity = new Qt3DCore::QEntity(m_rootEntity);
+    auto *rimLight = new Qt3DRender::QDirectionalLight(rimLightEntity);
+    rimLight->setColor(QColor(255, 255, 220));  // Warm rim light
+    rimLight->setIntensity(0.3f);
+    rimLight->setWorldDirection(QVector3D(1.0f, 0.0f, -1.0f).normalized());
+    rimLightEntity->addComponent(rimLight);
 }
 
 void Viewport3D::setupGrid()
@@ -109,7 +116,7 @@ void Viewport3D::setupAxis()
 
 void Viewport3D::createTestCube()
 {
-    // Create a simple test cube
+    // Create a test cube (building block)
     auto *cubeEntity = new Qt3DCore::QEntity(m_rootEntity);
 
     // Cube mesh
@@ -118,9 +125,12 @@ void Viewport3D::createTestCube()
     cubeMesh->setYExtent(2.0f);
     cubeMesh->setZExtent(2.0f);
 
-    // Cube material
+    // Cube material with proper lighting response
     auto *cubeMaterial = new Qt3DExtras::QPhongMaterial();
-    cubeMaterial->setDiffuse(QColor(100, 100, 200));
+    cubeMaterial->setDiffuse(QColor(120, 150, 220));      // Light blue
+    cubeMaterial->setAmbient(QColor(60, 75, 110));        // Darker ambient
+    cubeMaterial->setSpecular(QColor(255, 255, 255));     // White highlights
+    cubeMaterial->setShininess(50.0f);                    // Moderate shininess
 
     // Cube transform
     auto *cubeTransform = new Qt3DCore::QTransform();
@@ -138,8 +148,12 @@ void Viewport3D::createTestCube()
     floorMesh->setYExtent(0.1f);
     floorMesh->setZExtent(10.0f);
 
+    // Floor material
     auto *floorMaterial = new Qt3DExtras::QPhongMaterial();
-    floorMaterial->setDiffuse(QColor(120, 120, 120));
+    floorMaterial->setDiffuse(QColor(140, 140, 140));     // Medium gray
+    floorMaterial->setAmbient(QColor(80, 80, 80));        // Darker ambient
+    floorMaterial->setSpecular(QColor(200, 200, 200));    // Light specular
+    floorMaterial->setShininess(20.0f);                   // Low shininess (matte)
 
     auto *floorTransform = new Qt3DCore::QTransform();
     floorTransform->setTranslation(QVector3D(0.0f, -0.05f, 0.0f));
@@ -147,6 +161,28 @@ void Viewport3D::createTestCube()
     floorEntity->addComponent(floorMesh);
     floorEntity->addComponent(floorMaterial);
     floorEntity->addComponent(floorTransform);
+
+    // Add a second cube for comparison
+    auto *cube2Entity = new Qt3DCore::QEntity(m_rootEntity);
+
+    auto *cube2Mesh = new Qt3DExtras::QCuboidMesh();
+    cube2Mesh->setXExtent(1.5f);
+    cube2Mesh->setYExtent(3.0f);
+    cube2Mesh->setZExtent(1.0f);
+
+    // Different material for the second cube
+    auto *cube2Material = new Qt3DExtras::QPhongMaterial();
+    cube2Material->setDiffuse(QColor(220, 120, 100));     // Orange-red
+    cube2Material->setAmbient(QColor(110, 60, 50));       // Darker ambient
+    cube2Material->setSpecular(QColor(255, 255, 255));    // White highlights
+    cube2Material->setShininess(80.0f);                   // Higher shininess
+
+    auto *cube2Transform = new Qt3DCore::QTransform();
+    cube2Transform->setTranslation(QVector3D(3.0f, 1.5f, 0.0f));
+
+    cube2Entity->addComponent(cube2Mesh);
+    cube2Entity->addComponent(cube2Material);
+    cube2Entity->addComponent(cube2Transform);
 }
 
 void Viewport3D::onOrbitRequested(int deltaX, int deltaY)

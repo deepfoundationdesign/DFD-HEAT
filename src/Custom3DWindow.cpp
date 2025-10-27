@@ -12,6 +12,9 @@ Custom3DWindow::Custom3DWindow(QScreen *screen)
 {
     // Enable mouse tracking to get move events even without buttons pressed
     setMouseGrabEnabled(true);
+
+    // Set dark background color like Blender
+    defaultFrameGraph()->setClearColor(QColor(60, 60, 60));
 }
 
 Custom3DWindow::~Custom3DWindow() = default;
