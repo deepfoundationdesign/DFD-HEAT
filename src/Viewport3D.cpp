@@ -4,6 +4,11 @@
 #include "ViewportSettings.h"
 #include "GridEntity.h"
 #include "AxisEntity.h"
+#include "ModeManager.h"
+#include "ObjectManager.h"
+#include "SelectionManager.h"
+#include "SceneObject.h"
+#include "BoxObject.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QCamera>
@@ -13,6 +18,7 @@
 
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QDebug>
 
 Viewport3D::Viewport3D(QWidget *parent)
     : QWidget(parent)
@@ -78,6 +84,7 @@ void Viewport3D::setupScene()
     setupLighting();
     setupGrid();
     setupAxis();
+    setupObjectSystem();
     createTestCube();
 }
 
@@ -131,46 +138,56 @@ void Viewport3D::setupAxis()
     }
 }
 
+void Viewport3D::setupObjectSystem()
+{
+    // Create object management system
+    m_modeManager = std::make_unique<ModeManager>(this);
+    m_objectManager = std::make_unique<ObjectManager>(m_rootEntity, this);
+    m_selectionManager = std::make_unique<SelectionManager>(this);
+
+    qDebug() << "Object system initialized";
+}
+
+void Viewport3D::createBox()
+{
+    if (!m_objectManager) {
+        qWarning() << "ObjectManager not initialized";
+        return;
+    }
+
+    SceneObject* box = m_objectManager->createBox(QVector3D(2, 2, 2));
+    qDebug() << "Box created via convenience method";
+}
+
+void Viewport3D::deleteSelected()
+{
+    if (!m_selectionManager || !m_objectManager) {
+        qWarning() << "Selection or Object Manager not initialized";
+        return;
+    }
+
+    QVector<SceneObject*> selected = m_selectionManager->selectedObjects();
+    for (SceneObject* obj : selected) {
+        m_objectManager->removeObject(obj);
+    }
+}
+
 void Viewport3D::createTestCube()
 {
-    // Create a test cube (building block)
-    auto *cubeEntity = new Qt3DCore::QEntity(m_rootEntity);
+    // Create test objects using the new object system
 
-    // Cube mesh
-    auto *cubeMesh = new Qt3DExtras::QCuboidMesh();
-    cubeMesh->setXExtent(2.0f);
-    cubeMesh->setYExtent(2.0f);
-    cubeMesh->setZExtent(2.0f);
-
-    // Cube material with proper lighting response
-    auto *cubeMaterial = new Qt3DExtras::QPhongMaterial();
-    cubeMaterial->setDiffuse(QColor(120, 150, 220));      // Light blue
-    cubeMaterial->setAmbient(QColor(60, 75, 110));        // Darker ambient
-    cubeMaterial->setSpecular(QColor(255, 255, 255));     // White highlights
-    cubeMaterial->setShininess(50.0f);                    // Moderate shininess
-
-    // Cube transform
-    auto *cubeTransform = new Qt3DCore::QTransform();
-    cubeTransform->setTranslation(QVector3D(0.0f, 1.0f, 0.0f));
-
-    cubeEntity->addComponent(cubeMesh);
-    cubeEntity->addComponent(cubeMaterial);
-    cubeEntity->addComponent(cubeTransform);
-
-    // Create a floor plane
+    // Create a floor using the old system (temporary)
     auto *floorEntity = new Qt3DCore::QEntity(m_rootEntity);
-
     auto *floorMesh = new Qt3DExtras::QCuboidMesh();
     floorMesh->setXExtent(10.0f);
     floorMesh->setYExtent(0.1f);
     floorMesh->setZExtent(10.0f);
 
-    // Floor material
     auto *floorMaterial = new Qt3DExtras::QPhongMaterial();
-    floorMaterial->setDiffuse(QColor(140, 140, 140));     // Medium gray
-    floorMaterial->setAmbient(QColor(80, 80, 80));        // Darker ambient
-    floorMaterial->setSpecular(QColor(200, 200, 200));    // Light specular
-    floorMaterial->setShininess(20.0f);                   // Low shininess (matte)
+    floorMaterial->setDiffuse(QColor(140, 140, 140));
+    floorMaterial->setAmbient(QColor(80, 80, 80));
+    floorMaterial->setSpecular(QColor(200, 200, 200));
+    floorMaterial->setShininess(20.0f);
 
     auto *floorTransform = new Qt3DCore::QTransform();
     floorTransform->setTranslation(QVector3D(0.0f, -0.05f, 0.0f));
@@ -179,27 +196,16 @@ void Viewport3D::createTestCube()
     floorEntity->addComponent(floorMaterial);
     floorEntity->addComponent(floorTransform);
 
-    // Add a second cube for comparison
-    auto *cube2Entity = new Qt3DCore::QEntity(m_rootEntity);
+    // Create test boxes using new object system
+    SceneObject* box1 = m_objectManager->createBox(QVector3D(2, 2, 2));
+    box1->setLocation(QVector3D(0, 1, 0));
+    box1->setName("Cube");
 
-    auto *cube2Mesh = new Qt3DExtras::QCuboidMesh();
-    cube2Mesh->setXExtent(1.5f);
-    cube2Mesh->setYExtent(3.0f);
-    cube2Mesh->setZExtent(1.0f);
+    SceneObject* box2 = m_objectManager->createBox(QVector3D(1.5, 3, 1));
+    box2->setLocation(QVector3D(3, 1.5, 0));
+    box2->setName("Tall Box");
 
-    // Different material for the second cube
-    auto *cube2Material = new Qt3DExtras::QPhongMaterial();
-    cube2Material->setDiffuse(QColor(220, 120, 100));     // Orange-red
-    cube2Material->setAmbient(QColor(110, 60, 50));       // Darker ambient
-    cube2Material->setSpecular(QColor(255, 255, 255));    // White highlights
-    cube2Material->setShininess(80.0f);                   // Higher shininess
-
-    auto *cube2Transform = new Qt3DCore::QTransform();
-    cube2Transform->setTranslation(QVector3D(3.0f, 1.5f, 0.0f));
-
-    cube2Entity->addComponent(cube2Mesh);
-    cube2Entity->addComponent(cube2Material);
-    cube2Entity->addComponent(cube2Transform);
+    qDebug() << "Test scene created with" << m_objectManager->objectCount() << "objects";
 }
 
 void Viewport3D::onOrbitRequested(int deltaX, int deltaY)

@@ -19,6 +19,12 @@ set(SOURCES
     src/GridEntity.cpp
     src/AxisEntity.cpp
     src/AuthManager.cpp
+    src/ModeManager.cpp
+    src/MeshData.cpp
+    src/SceneObject.cpp
+    src/BoxObject.cpp
+    src/ObjectManager.cpp
+    src/SelectionManager.cpp
 )
 
 set(HEADERS
@@ -30,6 +36,12 @@ set(HEADERS
     include/GridEntity.h
     include/AxisEntity.h
     include/AuthManager.h
+    include/ModeManager.h
+    include/MeshData.h
+    include/SceneObject.h
+    include/BoxObject.h
+    include/ObjectManager.h
+    include/SelectionManager.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
