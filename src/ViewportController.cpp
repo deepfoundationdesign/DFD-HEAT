@@ -83,21 +83,21 @@ void ViewportController::pan(const QPoint &pos)
 
     QPoint delta = pos - m_lastMousePos;
 
-    // Apply inversion settings (fixing the inverted panning issue)
-    float deltaX = delta.x() * m_panSpeed * m_settings->panSensitivity();
+    // Apply pan deltas (X inverted, Y normal for natural panning)
+    float deltaX = -delta.x() * m_panSpeed * m_settings->panSensitivity();
     float deltaY = delta.y() * m_panSpeed * m_settings->panSensitivity();
 
-    if (!m_settings->invertPanX()) deltaX = -deltaX;
-    if (!m_settings->invertPanY()) deltaY = -deltaY;
+    if (m_settings->invertPanX()) deltaX = -deltaX;
+    if (m_settings->invertPanY()) deltaY = -deltaY;
 
     // Calculate right and up vectors relative to camera
     QVector3D forward = (m_target - m_camera->position()).normalized();
     QVector3D right = QVector3D::crossProduct(forward, m_camera->upVector()).normalized();
     QVector3D up = QVector3D::crossProduct(right, forward).normalized();
 
-    // Pan the target point
-    m_target += right * deltaX * m_radius;
-    m_target += up * deltaY * m_radius;
+    // Pan the target point (reduced radius factor for better control)
+    m_target += right * deltaX * m_radius * 0.1f;
+    m_target += up * deltaY * m_radius * 0.1f;
 
     updateCameraPosition();
     m_lastMousePos = pos;
@@ -107,8 +107,8 @@ void ViewportController::zoom(float delta)
 {
     if (!m_camera) return;
 
-    // Blender-style zoom
-    float zoomFactor = 1.0f + (delta * m_zoomSpeed * m_settings->zoomSensitivity());
+    // Blender-style zoom (scroll up = zoom in, scroll down = zoom out)
+    float zoomFactor = 1.0f - (delta * m_zoomSpeed * m_settings->zoomSensitivity());
     m_radius *= zoomFactor;
     m_radius = qBound(0.1f, m_radius, 1000.0f);
 
