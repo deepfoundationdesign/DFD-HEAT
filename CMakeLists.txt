@@ -16,6 +16,8 @@ set(SOURCES
     src/Custom3DWindow.cpp
     src/ViewportController.cpp
     src/ViewportSettings.cpp
+    src/GridEntity.cpp
+    src/AxisEntity.cpp
     src/AuthManager.cpp
 )
 
@@ -25,6 +27,8 @@ set(HEADERS
     include/Custom3DWindow.h
     include/ViewportController.h
     include/ViewportSettings.h
+    include/GridEntity.h
+    include/AxisEntity.h
     include/AuthManager.h
 )
 

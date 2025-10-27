@@ -2,6 +2,8 @@
 #include "Custom3DWindow.h"
 #include "ViewportController.h"
 #include "ViewportSettings.h"
+#include "GridEntity.h"
+#include "AxisEntity.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QCamera>
@@ -74,6 +76,8 @@ void Viewport3D::setupScene()
 
     // Setup scene elements
     setupLighting();
+    setupGrid();
+    setupAxis();
     createTestCube();
 }
 
@@ -106,12 +110,25 @@ void Viewport3D::setupLighting()
 
 void Viewport3D::setupGrid()
 {
-    // Disabled for now
+    if (!m_grid) {
+        m_grid = new GridEntity(m_rootEntity);
+        ViewportSettings *settings = m_controller->settings();
+        m_grid->setGridSize(settings->gridSize());
+        m_grid->setGridDivisions(settings->gridDivisions());
+        m_grid->setColor(settings->gridColor());
+        m_grid->setVisible(settings->showGrid());
+    }
 }
 
 void Viewport3D::setupAxis()
 {
-    // Disabled for now
+    if (!m_axis) {
+        m_axis = new AxisEntity(m_rootEntity);
+        ViewportSettings *settings = m_controller->settings();
+        m_axis->setLength(settings->axisLength());
+        m_axis->setThickness(settings->axisThickness());
+        m_axis->setVisible(settings->showAxis());
+    }
 }
 
 void Viewport3D::createTestCube()

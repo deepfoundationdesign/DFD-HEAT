@@ -11,9 +11,12 @@
 #include <Qt3DRender/QRenderPass>
 #include <Qt3DRender/QShaderProgram>
 #include <Qt3DRender/QGraphicsApiFilter>
+#include <QDebug>
 
 GridEntity::GridEntity(Qt3DCore::QNode *parent)
     : Qt3DCore::QEntity(parent)
+    , m_mesh(nullptr)
+    , m_material(nullptr)
     , m_gridSize(1.0f)
     , m_gridDivisions(20)
     , m_color(128, 128, 128, 100)

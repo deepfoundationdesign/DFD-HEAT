@@ -8,11 +8,19 @@
 #include <Qt3DCore/QAttribute>
 #include <Qt3DCore/QBuffer>
 #include <Qt3DRender/QGeometryRenderer>
+#include <Qt3DRender/QMaterial>
+#include <Qt3DRender/QEffect>
+#include <Qt3DRender/QTechnique>
+#include <Qt3DRender/QRenderPass>
+#include <Qt3DRender/QDepthTest>
+#include <Qt3DRender/QFilterKey>
+#include <Qt3DRender/QGraphicsApiFilter>
+#include <QDebug>
 
 AxisEntity::AxisEntity(Qt3DCore::QNode *parent)
     : Qt3DCore::QEntity(parent)
     , m_length(1000.0f)  // Extends towards "infinity"
-    , m_thickness(0.02f)
+    , m_thickness(0.1f)  // Thicker lines for better visibility
     , m_xAxis(nullptr)
     , m_yAxis(nullptr)
     , m_zAxis(nullptr)
@@ -21,6 +29,30 @@ AxisEntity::AxisEntity(Qt3DCore::QNode *parent)
 }
 
 AxisEntity::~AxisEntity() = default;
+
+// Helper function to create an always-on-top material by modifying QPhongMaterial
+static Qt3DRender::QMaterial* createAlwaysOnTopMaterial(const QColor &color, Qt3DCore::QNode *parent)
+{
+    // Get a standard phong material
+    auto *phongMaterial = new Qt3DExtras::QPhongMaterial(parent);
+    phongMaterial->setDiffuse(color);
+    phongMaterial->setAmbient(color.lighter(150));
+    phongMaterial->setSpecular(QColor(255, 255, 255));
+    phongMaterial->setShininess(100.0f);
+
+    // Access the effect and modify all render passes to add QDepthTest with Always
+    auto *effect = phongMaterial->effect();
+    for (auto *technique : effect->techniques()) {
+        for (auto *renderPass : technique->renderPasses()) {
+            // Add depth test with Always function
+            auto *depthTest = new Qt3DRender::QDepthTest(renderPass);
+            depthTest->setDepthFunction(Qt3DRender::QDepthTest::Always);
+            renderPass->addRenderState(depthTest);
+        }
+    }
+
+    return phongMaterial;
+}
 
 void AxisEntity::setLength(float length)
 {
@@ -56,14 +88,14 @@ void AxisEntity::createAxis()
         m_zAxis->deleteLater();
     }
 
-    // Create X axis (RED)
+    // Create X axis (RED) - horizontal along X
     m_xAxis = createAxisLine(QVector3D(1, 0, 0), QColor(255, 0, 0));
 
-    // Create Y axis (GREEN)
-    m_yAxis = createAxisLine(QVector3D(0, 1, 0), QColor(0, 255, 0));
+    // Create Y axis (GREEN) - horizontal along Z (since Qt3D Y is vertical)
+    m_yAxis = createAxisLine(QVector3D(0, 0, 1), QColor(0, 255, 0));
 
-    // Create Z axis (BLUE)
-    m_zAxis = createAxisLine(QVector3D(0, 0, 1), QColor(0, 0, 255));
+    // Z axis not created - Qt3D Y-axis is vertical, user only wants horizontal X and Y
+    m_zAxis = nullptr;
 }
 
 Qt3DCore::QEntity* AxisEntity::createAxisLine(const QVector3D &direction, const QColor &color)
@@ -127,12 +159,8 @@ Qt3DCore::QEntity* AxisEntity::createAxisLine(const QVector3D &direction, const 
     lineRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Lines);
     lineRenderer->setVertexCount(4);
 
-    // Create material with axis color
-    auto *material = new Qt3DExtras::QPhongMaterial(axisEntity);
-    material->setDiffuse(color);
-    material->setAmbient(color.darker());
-    material->setSpecular(QColor(255, 255, 255));
-    material->setShininess(100.0f);
+    // Create material with always-on-top depth test
+    auto *material = createAlwaysOnTopMaterial(color, axisEntity);
 
     // Add components
     axisEntity->addComponent(lineRenderer);
@@ -161,9 +189,8 @@ Qt3DCore::QEntity* AxisEntity::createAxisLine(const QVector3D &direction, const 
         arrowTransform->setRotationX(-90);
     }
 
-    auto *arrowMaterial = new Qt3DExtras::QPhongMaterial(arrowEntity);
-    arrowMaterial->setDiffuse(color);
-    arrowMaterial->setAmbient(color.darker());
+    // Create material for arrow with always-on-top depth test
+    auto *arrowMaterial = createAlwaysOnTopMaterial(color, arrowEntity);
 
     arrowEntity->addComponent(arrowMesh);
     arrowEntity->addComponent(arrowTransform);
