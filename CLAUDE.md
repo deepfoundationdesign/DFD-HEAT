@@ -1,5 +1,36 @@
 # DFD-HEAT: 3D FEM Heatflow Application for BIM
 
+## ⚠️ CRITICAL LICENSING NOTICE ⚠️
+
+**BLENDER GPL LICENSE RESTRICTION**
+
+This project implements a Blender-LIKE user interface and workflow for 3D modeling, but under NO circumstances can we use, derive from, or incorporate ANY code from Blender or GPL-licensed software.
+
+**Reasons:**
+- Blender is licensed under GNU GPL v2+
+- ANY derivation from GPL code would force our entire codebase to become GPL
+- This would make commercial licensing impossible
+- We must maintain proprietary/commercial licensing options
+
+**What we CAN do:**
+- Implement similar USER INTERFACE concepts (button layouts, workflows)
+- Mimic INTERACTION patterns (keyboard shortcuts, mouse controls)
+- Create SIMILAR functionality from scratch using Qt3D
+
+**What we CANNOT do:**
+- Copy, reference, or derive ANY Blender source code
+- Use GPL-licensed libraries or dependencies
+- Implement Blender-specific algorithms without clean-room implementation
+- Study Blender code to guide our implementation
+
+**Implementation Strategy:**
+- Use only Qt3D, Qt6, and permissively-licensed libraries (MIT, BSD, Apache, LGPL)
+- Design from first principles and standard CAD/3D modeling concepts
+- Reference general 3D modeling literature, not Blender-specific documentation
+- When in doubt, independently design and implement features
+
+This restriction is NON-NEGOTIABLE and must be followed at all times during development.
+
 ## Project Overview
 A professional-grade 3D Finite Element Method (FEM) heatflow simulation application for Building Information Modeling (BIM), designed for thermal analysis of structures in the German construction industry (Gutachten and project designs).
 
@@ -279,6 +310,404 @@ This solution provides professional Blender-style navigation that feels natural 
 
 This creates the professional appearance expected from engineering software while maintaining good performance for complex 3D scenes.
 
+## Object and Edit Mode System Design
+
+### Overview
+The application implements two distinct interaction modes similar to standard CAD software:
+- **Object Mode**: CRUD operations on whole objects with transform properties
+- **Edit Mode**: CRUD operations on mesh elements (vertices, edges, faces)
+
+### Object Mode
+
+#### Functionality
+- Create primitive objects (Box, Cylinder, Sphere)
+- Delete selected objects
+- Duplicate objects
+- Transform objects (move, rotate, scale)
+- Select single or multiple objects
+- View and edit object properties
+
+#### Object Properties
+Each object maintains the following properties:
+
+**Transform Properties:**
+- `location`: QVector3D - Object origin position in world space
+- `rotation`: QVector3D - Euler angles (X, Y, Z) in degrees
+- `scale`: QVector3D - Scale factors along each axis
+- `dimensions`: QVector3D - Physical dimensions in meters
+
+**Object Properties:**
+- `name`: QString - User-defined object name
+- `uuid`: QUuid - Unique identifier
+- `visible`: bool - Visibility flag
+- `locked`: bool - Prevent modifications
+- `materialId`: int - Reference to thermal material (for FEM)
+
+#### Primitive Types
+
+**1. Box (Rectangular Prism)**
+- Parameters: width, height, depth
+- Default: 1m × 1m × 1m cube
+- Geometry: 8 vertices, 12 edges, 6 faces
+
+**2. Cylinder**
+- Parameters: radius, height, segments
+- Default: 0.5m radius, 2m height, 32 segments
+- Geometry: Circular caps with vertical sides
+
+**3. Sphere**
+- Parameters: radius, segments, rings
+- Default: 1m radius, 32 segments, 16 rings
+- Geometry: UV sphere topology
+
+### Edit Mode
+
+#### Functionality
+- Enter edit mode on selected object (TAB key or button)
+- Select vertices, edges, or faces
+- Move/delete/extrude selected elements
+- Create new geometry by adding vertices
+- Merge/split vertices
+- Subdivide edges/faces
+
+#### Selection Modes
+Three mutually exclusive selection modes:
+
+**1. Vertex Selection Mode**
+- Select individual vertices
+- Display as small dots/spheres
+- Click to select, Shift+Click for multi-select
+- Box select support (B key or tool)
+
+**2. Edge Selection Mode**
+- Select edges between vertices
+- Highlight selected edges
+- Alt+Click to select edge loops (future)
+
+**3. Face Selection Mode**
+- Select polygonal faces
+- Highlight selected faces with transparency
+- Critical for boundary condition assignment (FEM)
+
+#### Edit Operations
+
+**Create:**
+- Add vertex at cursor position
+- Extrude vertices/edges/faces
+- Subdivide selected geometry
+
+**Read:**
+- Display selected element properties
+- Show coordinates, indices
+
+**Update:**
+- Move vertices (G key or gizmo)
+- Rotate faces around normal
+- Scale selection
+
+**Delete:**
+- Delete vertices (and connected edges/faces)
+- Delete edges (split faces)
+- Delete faces (keep edges)
+
+### Architecture Design
+
+#### Core Classes
+
+**1. ModeManager**
+```cpp
+class ModeManager : public QObject {
+    Q_OBJECT
+public:
+    enum Mode { ObjectMode, EditMode };
+
+    Mode currentMode() const;
+    void setMode(Mode mode);
+    SceneObject* activeObject() const;
+
+signals:
+    void modeChanged(Mode mode);
+    void activeObjectChanged(SceneObject* object);
+};
+```
+
+**2. SceneObject (Base Class)**
+```cpp
+class SceneObject : public Qt3DCore::QEntity {
+    Q_OBJECT
+public:
+    // Transform properties
+    QVector3D location() const;
+    QVector3D rotation() const;
+    QVector3D scale() const;
+    QVector3D dimensions() const;
+
+    void setLocation(const QVector3D& pos);
+    void setRotation(const QVector3D& rot);
+    void setScale(const QVector3D& scale);
+
+    // Object properties
+    QString name() const;
+    QUuid uuid() const;
+    bool isVisible() const;
+    bool isLocked() const;
+
+    // Mesh access for edit mode
+    MeshData* meshData();
+    void updateGeometry();
+
+signals:
+    void transformChanged();
+    void propertiesChanged();
+};
+```
+
+**3. PrimitiveObject (Derived Classes)**
+```cpp
+class BoxObject : public SceneObject {
+    Q_OBJECT
+public:
+    BoxObject(float width, float height, float depth);
+    void setDimensions(float w, float h, float d);
+};
+
+class CylinderObject : public SceneObject {
+    Q_OBJECT
+public:
+    CylinderObject(float radius, float height, int segments);
+    void setRadius(float r);
+    void setHeight(float h);
+};
+
+class SphereObject : public SceneObject {
+    Q_OBJECT
+public:
+    SphereObject(float radius, int segments, int rings);
+    void setRadius(float r);
+};
+```
+
+**4. MeshData**
+```cpp
+class MeshData {
+public:
+    struct Vertex {
+        QVector3D position;
+        int index;
+    };
+
+    struct Edge {
+        int v0, v1;  // Vertex indices
+        int index;
+    };
+
+    struct Face {
+        QVector<int> vertices;  // Vertex indices (ordered)
+        QVector<int> edges;     // Edge indices
+        int index;
+    };
+
+    QVector<Vertex> vertices;
+    QVector<Edge> edges;
+    QVector<Face> faces;
+
+    void addVertex(const QVector3D& pos);
+    void addFace(const QVector<int>& vertexIndices);
+    void removeVertex(int index);
+    void removeFace(int index);
+
+    // Geometry generation for Qt3D
+    Qt3DRender::QGeometry* generateGeometry();
+};
+```
+
+**5. SelectionManager**
+```cpp
+class SelectionManager : public QObject {
+    Q_OBJECT
+public:
+    enum SelectionMode { ObjectSelection, VertexSelection, EdgeSelection, FaceSelection };
+
+    SelectionMode mode() const;
+    void setMode(SelectionMode mode);
+
+    // Object mode
+    QVector<SceneObject*> selectedObjects() const;
+    void selectObject(SceneObject* obj, bool addToSelection = false);
+    void clearSelection();
+
+    // Edit mode
+    QVector<int> selectedVertices() const;
+    QVector<int> selectedEdges() const;
+    QVector<int> selectedFaces() const;
+
+    void selectVertex(int index, bool addToSelection = false);
+    void selectEdge(int index, bool addToSelection = false);
+    void selectFace(int index, bool addToSelection = false);
+
+signals:
+    void selectionChanged();
+    void modeChanged(SelectionMode mode);
+};
+```
+
+**6. ObjectManager**
+```cpp
+class ObjectManager : public QObject {
+    Q_OBJECT
+public:
+    void addObject(SceneObject* object);
+    void removeObject(SceneObject* object);
+    void duplicateObject(SceneObject* object);
+
+    SceneObject* createBox(const QVector3D& dimensions);
+    SceneObject* createCylinder(float radius, float height);
+    SceneObject* createSphere(float radius);
+
+    QVector<SceneObject*> allObjects() const;
+    SceneObject* findByUuid(const QUuid& uuid);
+
+signals:
+    void objectAdded(SceneObject* obj);
+    void objectRemoved(SceneObject* obj);
+};
+```
+
+**7. TransformGizmo**
+```cpp
+class TransformGizmo : public Qt3DCore::QEntity {
+    Q_OBJECT
+public:
+    enum Mode { Translate, Rotate, Scale };
+
+    void setMode(Mode mode);
+    void setTarget(SceneObject* object);
+    void setTargetVertices(const QVector<int>& vertices);
+
+    void showTranslateGizmo();  // RGB arrows for X, Y, Z
+    void showRotateGizmo();     // RGB circles for X, Y, Z
+    void showScaleGizmo();      // RGB boxes for X, Y, Z
+
+signals:
+    void transformApplied();
+};
+```
+
+### UI Integration
+
+#### Mode Switching
+- TAB key: Toggle between Object Mode and Edit Mode
+- Toolbar buttons: Object Mode / Edit Mode buttons
+- Status bar: Display current mode
+- Context-sensitive panels update based on mode
+
+#### Property Panels
+
+**Object Mode Panel:**
+- Object name
+- Transform properties (Location, Rotation, Scale)
+- Dimensions (editable, updates scale)
+- Material assignment
+- Visibility/Lock toggles
+
+**Edit Mode Panel:**
+- Selection mode buttons (Vertex/Edge/Face)
+- Selected element count
+- Element properties (coordinates, indices)
+- Edit operations buttons (Extrude, Delete, Merge, etc.)
+
+#### Keyboard Shortcuts (Industry Standard)
+
+**Mode Switching:**
+- TAB: Toggle Object/Edit mode
+
+**Object Mode:**
+- G: Grab/Move
+- R: Rotate
+- S: Scale
+- X/Delete: Delete object
+- Shift+D: Duplicate
+- H: Hide selected
+- Alt+H: Unhide all
+
+**Edit Mode:**
+- G: Grab/Move selection
+- E: Extrude
+- X: Delete menu
+- Ctrl+R: Edge loop (future)
+- B: Box select
+- A: Select all / Deselect all
+
+### Mouse Interaction
+
+**Object Mode:**
+- Left Click: Select object
+- Shift + Left Click: Add to selection
+- Left Click + Drag: Transform with active gizmo
+- Right Click: Context menu (Delete, Duplicate, Properties)
+
+**Edit Mode:**
+- Left Click: Select vertex/edge/face
+- Shift + Left Click: Add to selection
+- Left Click + Drag on selection: Move selection
+- Right Click: Context menu (Delete, Extrude, Merge)
+
+### Visual Feedback
+
+**Object Selection:**
+- Orange outline shader on selected objects
+- Bounding box display
+- Transform gizmo at object origin
+
+**Edit Mode Selection:**
+- Vertices: Large orange dots
+- Edges: Thick orange lines
+- Faces: Orange transparent overlay
+- Transform gizmo at selection center
+
+### Implementation Priority
+
+**Phase 1: Object Mode Foundation**
+1. ModeManager class
+2. SceneObject base class
+3. ObjectManager class
+4. SelectionManager (object mode only)
+5. Basic BoxObject implementation
+6. Simple object selection (no multi-select yet)
+7. Basic transform properties display
+
+**Phase 2: Object Mode Complete**
+1. CylinderObject and SphereObject
+2. Multi-object selection
+3. Transform gizmo (translate mode)
+4. Property panel integration
+5. Keyboard shortcuts (G, R, S, X, TAB)
+6. Object duplication
+
+**Phase 3: Edit Mode Foundation**
+1. MeshData class implementation
+2. Edit mode activation on selected object
+3. Vertex selection mode
+4. Visual feedback for selected vertices
+5. Basic vertex movement (G key)
+6. Vertex deletion
+
+**Phase 4: Edit Mode Complete**
+1. Edge selection mode
+2. Face selection mode
+3. Selection mode switching UI
+4. Box selection tool
+5. Extrude operation (faces)
+6. Merge vertices
+7. Edit mode property panel
+
+**Phase 5: Advanced Features**
+1. Transform gizmo (rotate and scale modes)
+2. Edge loop selection
+3. Subdivide operations
+4. Normal display
+5. Face material assignment (for FEM boundaries)
+
 ## Current Status
 
 ### ✅ Completed Features:
@@ -299,13 +728,36 @@ This creates the professional appearance expected from engineering software whil
 The application now provides a solid foundation for FEM thermal analysis with professional-grade 3D visualization that matches the quality of commercial CAD software.
 
 ## Next Steps
-1. Implement RGB axis lines and 1m engineering grid
-2. Create material database with DIN/EN standards
-3. Develop object creation tools for building elements
-4. Integrate GMSH for mesh generation
-5. Build FEM solver with Eigen linear algebra
-3. Create proof-of-concept for each major component
-4. Iterative development with testing
+
+### Immediate Priority: Object and Edit Mode System
+Following the phased implementation plan detailed in "Object and Edit Mode System Design":
+
+**Phase 1: Object Mode Foundation (Current)**
+1. Implement ModeManager class for mode switching
+2. Create SceneObject base class with transform properties
+3. Develop ObjectManager for object lifecycle management
+4. Build SelectionManager for object selection
+5. Implement basic BoxObject primitive
+6. Add simple object selection (single object)
+7. Create basic property panel for transform display
+
+**Phase 2: Object Mode Complete**
+1. Add CylinderObject and SphereObject primitives
+2. Implement multi-object selection
+3. Create TransformGizmo for visual manipulation
+4. Integrate property panel with UI
+5. Add keyboard shortcuts (G, R, S, X, TAB)
+6. Implement object duplication
+
+**Phase 3-5: Edit Mode Implementation**
+- Detailed in "Object and Edit Mode System Design" section
+
+### Future Priorities
+1. Create material database with DIN/EN standards
+2. Integrate GMSH for mesh generation
+3. Build FEM solver with Eigen linear algebra
+4. Implement temperature field visualization
+5. Add IFC import capabilities
 
 ## Commands for Development
 - Lint: `godot --check-only`
