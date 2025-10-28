@@ -10,48 +10,72 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets 3DCore 3DRender 3DInput 3DExtras Sql Network)
 
 set(SOURCES
-    src/main.cpp
-    src/MainWindow.cpp
-    src/Viewport3D.cpp
-    src/Custom3DWindow.cpp
-    src/ViewportController.cpp
-    src/ViewportSettings.cpp
-    src/GridEntity.cpp
-    src/AxisEntity.cpp
-    src/AuthManager.cpp
-    src/ModeManager.cpp
-    src/MeshData.cpp
-    src/SceneObject.cpp
-    src/BoxObject.cpp
-    src/ObjectManager.cpp
-    src/SelectionManager.cpp
-    src/PropertiesPanel.cpp
-    src/CrosshairsOverlay.cpp
-    src/CrosshairsEntity3D.cpp
-    src/Collection.cpp
-    src/SceneHierarchyPanel.cpp
+    # Core
+    src/core/main.cpp
+
+    # UI
+    src/ui/MainWindow.cpp
+    src/ui/PropertiesPanel.cpp
+    src/ui/SceneHierarchyPanel.cpp
+
+    # Viewport
+    src/viewport/Viewport3D.cpp
+    src/viewport/Custom3DWindow.cpp
+    src/viewport/ViewportController.cpp
+    src/viewport/ViewportSettings.cpp
+
+    # Scene
+    src/scene/SceneObject.cpp
+    src/scene/BoxObject.cpp
+    src/scene/ObjectManager.cpp
+    src/scene/SelectionManager.cpp
+    src/scene/ModeManager.cpp
+    src/scene/Collection.cpp
+
+    # Entities
+    src/entities/GridEntity.cpp
+    src/entities/AxisEntity.cpp
+    src/entities/CrosshairsOverlay.cpp
+    src/entities/CrosshairsEntity3D.cpp
+
+    # Mesh
+    src/mesh/MeshData.cpp
+
+    # Auth
+    src/auth/AuthManager.cpp
 )
 
 set(HEADERS
-    include/MainWindow.h
-    include/Viewport3D.h
-    include/Custom3DWindow.h
-    include/ViewportController.h
-    include/ViewportSettings.h
-    include/GridEntity.h
-    include/AxisEntity.h
-    include/AuthManager.h
-    include/ModeManager.h
-    include/MeshData.h
-    include/SceneObject.h
-    include/BoxObject.h
-    include/ObjectManager.h
-    include/SelectionManager.h
-    include/PropertiesPanel.h
-    include/CrosshairsOverlay.h
-    include/CrosshairsEntity3D.h
-    include/Collection.h
-    include/SceneHierarchyPanel.h
+    # UI
+    include/ui/MainWindow.h
+    include/ui/PropertiesPanel.h
+    include/ui/SceneHierarchyPanel.h
+
+    # Viewport
+    include/viewport/Viewport3D.h
+    include/viewport/Custom3DWindow.h
+    include/viewport/ViewportController.h
+    include/viewport/ViewportSettings.h
+
+    # Scene
+    include/scene/SceneObject.h
+    include/scene/BoxObject.h
+    include/scene/ObjectManager.h
+    include/scene/SelectionManager.h
+    include/scene/ModeManager.h
+    include/scene/Collection.h
+
+    # Entities
+    include/entities/GridEntity.h
+    include/entities/AxisEntity.h
+    include/entities/CrosshairsOverlay.h
+    include/entities/CrosshairsEntity3D.h
+
+    # Mesh
+    include/mesh/MeshData.h
+
+    # Auth
+    include/auth/AuthManager.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

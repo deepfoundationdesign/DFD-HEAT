@@ -1,4 +1,4 @@
-#include "CrosshairsEntity3D.h"
+#include "entities/CrosshairsEntity3D.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DCore/QGeometry>

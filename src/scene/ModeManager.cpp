@@ -1,4 +1,4 @@
-#include "ModeManager.h"
+#include "scene/ModeManager.h"
 #include <QDebug>
 
 ModeManager::ModeManager(QObject *parent)

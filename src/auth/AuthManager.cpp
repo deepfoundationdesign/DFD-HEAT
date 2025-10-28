@@ -1,4 +1,4 @@
-#include "AuthManager.h"
+#include "auth/AuthManager.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

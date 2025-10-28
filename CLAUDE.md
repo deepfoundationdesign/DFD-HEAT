@@ -34,6 +34,125 @@ This restriction is NON-NEGOTIABLE and must be followed at all times during deve
 ## Project Overview
 A professional-grade 3D Finite Element Method (FEM) heatflow simulation application for Building Information Modeling (BIM), designed for thermal analysis of structures in the German construction industry (Gutachten and project designs).
 
+## Project Structure
+
+The codebase follows a modular directory structure to maintain clarity and scalability as the project grows. Each module has a specific responsibility and contains related functionality.
+
+### Directory Organization
+
+```
+DFD-HEAT/
+├── src/
+│   ├── core/              # Core application infrastructure
+│   │   ├── main.cpp       # Application entry point
+│   │   └── Application.cpp (future)
+│   │
+│   ├── ui/                # User interface (Qt Widgets)
+│   │   ├── MainWindow.cpp
+│   │   ├── PropertiesPanel.cpp
+│   │   ├── SceneHierarchyPanel.cpp
+│   │   └── ToolbarWidget.cpp (future)
+│   │
+│   ├── viewport/          # 3D viewport and camera control
+│   │   ├── Viewport3D.cpp
+│   │   ├── Custom3DWindow.cpp
+│   │   ├── ViewportController.cpp
+│   │   └── ViewportSettings.cpp
+│   │
+│   ├── scene/             # Scene graph and object management
+│   │   ├── SceneObject.cpp
+│   │   ├── BoxObject.cpp
+│   │   ├── CylinderObject.cpp (future)
+│   │   ├── SphereObject.cpp (future)
+│   │   ├── ObjectManager.cpp
+│   │   ├── SelectionManager.cpp
+│   │   ├── ModeManager.cpp
+│   │   └── Collection.cpp
+│   │
+│   ├── tools/             # Interaction tools (transform, select, edit)
+│   │   ├── TransformGizmo.cpp (future)
+│   │   ├── TransformTool.cpp (future)
+│   │   ├── SelectionTool.cpp (future)
+│   │   └── EditTool.cpp (future)
+│   │
+│   ├── entities/          # 3D helper entities (grid, axis, overlays)
+│   │   ├── GridEntity.cpp
+│   │   ├── AxisEntity.cpp
+│   │   ├── CrosshairsOverlay.cpp
+│   │   └── CrosshairsEntity3D.cpp
+│   │
+│   ├── mesh/              # Mesh data structures and operations
+│   │   └── MeshData.cpp
+│   │
+│   └── auth/              # Authentication (if needed)
+│       └── AuthManager.cpp
+│
+├── include/
+│   ├── core/
+│   ├── ui/
+│   ├── viewport/
+│   ├── scene/
+│   ├── tools/
+│   ├── entities/
+│   ├── mesh/
+│   └── auth/
+│
+├── resources/             # Images, icons, styles
+├── shaders/               # Custom GLSL shaders (future)
+└── CMakeLists.txt
+```
+
+### Module Descriptions
+
+**core/** - Application entry point, global settings, application lifecycle management
+
+**ui/** - All Qt Widget-based UI components (panels, dialogs, windows). Anything that's a QWidget goes here.
+
+**viewport/** - 3D viewport rendering, camera control, navigation (orbit/pan/zoom/fly mode), viewport settings
+
+**scene/** - Scene objects, object hierarchy, collections, object lifecycle management, selection state, mode management
+
+**tools/** - User interaction tools for manipulating objects. Tools are activated by keyboard shortcuts or toolbar buttons:
+- TransformGizmo: Visual 3D gizmo for moving/rotating/scaling
+- TransformTool: Logic for transform operations
+- SelectionTool: Advanced selection operations
+- EditTool: Mesh editing operations
+
+**entities/** - Visual helper entities that assist with 3D navigation and orientation (grid, axis indicators, crosshairs, etc.)
+
+**mesh/** - Mesh data structures, geometry generation, mesh operations (subdivision, extrusion, etc.)
+
+**auth/** - Authentication and user management (can be relocated if not needed)
+
+### Guidelines for New Features
+
+When implementing new functionality, ask these questions to determine placement:
+
+1. **Is it a UI widget/panel?** → `ui/`
+2. **Is it viewport/camera related?** → `viewport/`
+3. **Is it a scene object or manages objects?** → `scene/`
+4. **Is it a tool for user interaction?** → `tools/`
+5. **Is it a visual helper in the 3D view?** → `entities/`
+6. **Is it mesh geometry related?** → `mesh/`
+
+**If no existing module fits:**
+- Consider creating a new module with clear responsibility
+- Update this documentation with the new module
+- Ensure the module name reflects its purpose
+
+### Include Path Convention
+
+Files should use relative includes based on their module:
+
+```cpp
+// In src/ui/MainWindow.cpp
+#include "ui/MainWindow.h"           // Own header
+#include "viewport/Viewport3D.h"     // Other module
+#include "scene/ObjectManager.h"     // Other module
+```
+
+This makes dependencies clear and prevents circular includes.
+
 ## Core Components
 
 ### 1. 3D Modeling Environment (Godot-based)

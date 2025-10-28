@@ -1,4 +1,4 @@
-#include "GridEntity.h"
+#include "entities/GridEntity.h"
 
 #include <Qt3DCore/QGeometry>
 #include <Qt3DCore/QAttribute>

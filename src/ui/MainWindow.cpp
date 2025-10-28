@@ -1,11 +1,11 @@
-#include "MainWindow.h"
-#include "Viewport3D.h"
-#include "AuthManager.h"
-#include "PropertiesPanel.h"
-#include "SceneHierarchyPanel.h"
-#include "SelectionManager.h"
-#include "SceneObject.h"
-#include "ObjectManager.h"
+#include "ui/MainWindow.h"
+#include "viewport/Viewport3D.h"
+#include "auth/AuthManager.h"
+#include "ui/PropertiesPanel.h"
+#include "ui/SceneHierarchyPanel.h"
+#include "scene/SelectionManager.h"
+#include "scene/SceneObject.h"
+#include "scene/ObjectManager.h"
 
 #include <QMenuBar>
 #include <QToolBar>

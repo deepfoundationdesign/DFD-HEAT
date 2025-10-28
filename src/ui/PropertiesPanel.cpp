@@ -1,5 +1,5 @@
-#include "PropertiesPanel.h"
-#include "SceneObject.h"
+#include "ui/PropertiesPanel.h"
+#include "scene/SceneObject.h"
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QGroupBox>

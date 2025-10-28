@@ -1,5 +1,5 @@
-#include "BoxObject.h"
-#include "MeshData.h"
+#include "scene/BoxObject.h"
+#include "mesh/MeshData.h"
 #include <Qt3DRender/QGeometryRenderer>
 #include <Qt3DExtras/QPhongMaterial>
 #include <QDebug>

@@ -1,4 +1,4 @@
-#include "Custom3DWindow.h"
+#include "viewport/Custom3DWindow.h"
 #include <QDebug>
 #include <QApplication>
 #include <QCursor>

@@ -1,5 +1,5 @@
-#include "SceneObject.h"
-#include "MeshData.h"
+#include "scene/SceneObject.h"
+#include "mesh/MeshData.h"
 #include <Qt3DRender/QGeometryRenderer>
 #include <Qt3DRender/QObjectPicker>
 #include <Qt3DRender/QPickEvent>

@@ -1,4 +1,4 @@
-#include "MeshData.h"
+#include "mesh/MeshData.h"
 #include <Qt3DCore/QGeometry>
 #include <Qt3DCore/QAttribute>
 #include <Qt3DCore/QBuffer>

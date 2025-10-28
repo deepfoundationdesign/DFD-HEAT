@@ -1,4 +1,4 @@
-#include "CrosshairsOverlay.h"
+#include "entities/CrosshairsOverlay.h"
 #include <QPainter>
 #include <QPaintEvent>
 #include <QDebug>

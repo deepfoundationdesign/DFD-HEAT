@@ -1,8 +1,8 @@
-#include "SceneHierarchyPanel.h"
-#include "ObjectManager.h"
-#include "SelectionManager.h"
-#include "Collection.h"
-#include "SceneObject.h"
+#include "ui/SceneHierarchyPanel.h"
+#include "scene/ObjectManager.h"
+#include "scene/SelectionManager.h"
+#include "scene/Collection.h"
+#include "scene/SceneObject.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>

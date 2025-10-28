@@ -1,7 +1,7 @@
 #ifndef BOXOBJECT_H
 #define BOXOBJECT_H
 
-#include "SceneObject.h"
+#include "scene/SceneObject.h"
 
 /**
  * @brief Box/Cube primitive object

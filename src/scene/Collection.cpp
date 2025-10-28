@@ -1,5 +1,5 @@
-#include "Collection.h"
-#include "SceneObject.h"
+#include "scene/Collection.h"
+#include "scene/SceneObject.h"
 #include <QDebug>
 
 Collection::Collection(const QString& name, QObject* parent)

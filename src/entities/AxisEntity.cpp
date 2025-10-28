@@ -1,4 +1,4 @@
-#include "AxisEntity.h"
+#include "entities/AxisEntity.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DExtras/QCylinderMesh>

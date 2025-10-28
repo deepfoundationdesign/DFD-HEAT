@@ -1,5 +1,5 @@
-#include "ViewportController.h"
-#include "ViewportSettings.h"
+#include "viewport/ViewportController.h"
+#include "viewport/ViewportSettings.h"
 
 #include <Qt3DRender/QCamera>
 #include <Qt3DInput/QMouseDevice>

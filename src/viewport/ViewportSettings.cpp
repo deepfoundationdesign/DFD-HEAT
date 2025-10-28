@@ -1,4 +1,4 @@
-#include "ViewportSettings.h"
+#include "viewport/ViewportSettings.h"
 
 ViewportSettings::ViewportSettings(QObject *parent)
     : QObject(parent)

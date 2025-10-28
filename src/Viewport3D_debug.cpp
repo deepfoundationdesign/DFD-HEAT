@@ -1,6 +1,6 @@
-#include "Viewport3D.h"
-#include "ViewportController.h"
-#include "ViewportSettings.h"
+#include "viewport/Viewport3D.h"
+#include "viewport/ViewportController.h"
+#include "viewport/ViewportSettings.h"
 
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DCore/QTransform>

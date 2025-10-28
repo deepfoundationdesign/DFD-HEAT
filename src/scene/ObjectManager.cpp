@@ -1,6 +1,6 @@
-#include "ObjectManager.h"
-#include "SceneObject.h"
-#include "BoxObject.h"
+#include "scene/ObjectManager.h"
+#include "scene/SceneObject.h"
+#include "scene/BoxObject.h"
 #include <QDebug>
 
 ObjectManager::ObjectManager(Qt3DCore::QEntity* rootEntity, QObject *parent)

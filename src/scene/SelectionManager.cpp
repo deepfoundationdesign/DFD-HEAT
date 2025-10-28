@@ -1,5 +1,5 @@
-#include "SelectionManager.h"
-#include "SceneObject.h"
+#include "scene/SelectionManager.h"
+#include "scene/SceneObject.h"
 #include <QDebug>
 
 SelectionManager::SelectionManager(QObject *parent)

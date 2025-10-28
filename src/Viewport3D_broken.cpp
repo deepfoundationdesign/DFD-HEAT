@@ -1,8 +1,8 @@
-#include "Viewport3D.h"
-#include "ViewportController.h"
-#include "ViewportSettings.h"
-#include "GridEntity.h"
-#include "AxisEntity.h"
+#include "viewport/Viewport3D.h"
+#include "viewport/ViewportController.h"
+#include "viewport/ViewportSettings.h"
+#include "entities/GridEntity.h"
+#include "entities/AxisEntity.h"
 
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DCore/QTransform>
