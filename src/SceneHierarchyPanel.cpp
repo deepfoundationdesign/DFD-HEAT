@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QMouseEvent>
+#include <QMimeData>
+#include <QDataStream>
 #include <QDebug>
 
 // Custom item roles for storing pointers
@@ -19,11 +21,135 @@ constexpr int ObjectRole = Qt::UserRole + 1;
 constexpr int CollectionRole = Qt::UserRole + 2;
 constexpr int VisibilityRole = Qt::UserRole + 3;
 constexpr int ItemTypeRole = Qt::UserRole + 4;
+constexpr int UuidRole = Qt::UserRole + 5;  // Store UUID as QString
 
 enum ItemType {
     ObjectItem,
     CollectionItem
 };
+
+// Custom MIME type for drag & drop
+constexpr const char* SCENE_HIERARCHY_MIME = "application/x-dfd-scene-hierarchy";
+
+//==============================================================================
+// SceneHierarchyModel Implementation
+//==============================================================================
+
+SceneHierarchyModel::SceneHierarchyModel(QObject* parent)
+    : QStandardItemModel(parent)
+{
+}
+
+QStringList SceneHierarchyModel::mimeTypes() const
+{
+    return QStringList() << SCENE_HIERARCHY_MIME;
+}
+
+QMimeData* SceneHierarchyModel::mimeData(const QModelIndexList& indexes) const
+{
+    if (indexes.isEmpty()) {
+        return nullptr;
+    }
+
+    QMimeData* mimeData = new QMimeData();
+    QByteArray encodedData;
+    QDataStream stream(&encodedData, QIODevice::WriteOnly);
+
+    // Only encode the first index (we only support single selection)
+    QModelIndex index = indexes.first();
+    if (index.column() != 0) {
+        index = index.sibling(index.row(), 0);
+    }
+
+    QStandardItem* item = itemFromIndex(index);
+    if (!item) {
+        return mimeData;
+    }
+
+    // Store item type and UUID
+    ItemType type = static_cast<ItemType>(item->data(ItemTypeRole).toInt());
+    QString uuid = item->data(UuidRole).toString();
+
+    stream << static_cast<int>(type);
+    stream << uuid;
+
+    // Store parent path (for reconstructing tree position)
+    QStringList parentPath;
+    QModelIndex parentIndex = index.parent();
+    while (parentIndex.isValid()) {
+        QStandardItem* parentItem = itemFromIndex(parentIndex);
+        if (parentItem) {
+            parentPath.prepend(parentItem->data(UuidRole).toString());
+        }
+        parentIndex = parentIndex.parent();
+    }
+    stream << parentPath;
+
+    mimeData->setData(SCENE_HIERARCHY_MIME, encodedData);
+    return mimeData;
+}
+
+bool SceneHierarchyModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
+                                       int row, int column, const QModelIndex& parent)
+{
+    if (!data || !data->hasFormat(SCENE_HIERARCHY_MIME)) {
+        return false;
+    }
+
+    if (action == Qt::IgnoreAction) {
+        return true;
+    }
+
+    // Decode the dragged item info
+    QByteArray encodedData = data->data(SCENE_HIERARCHY_MIME);
+    QDataStream stream(&encodedData, QIODevice::ReadOnly);
+
+    int typeInt;
+    QString uuid;
+    QStringList parentPath;
+
+    stream >> typeInt;
+    stream >> uuid;
+    stream >> parentPath;
+
+    ItemType type = static_cast<ItemType>(typeInt);
+
+    // Must drop onto a collection (not root)
+    if (!parent.isValid()) {
+        qDebug() << "[SceneHierarchyModel] Rejecting drop to root level";
+        return false;
+    }
+
+    // Get target collection UUID from parent item
+    QStandardItem* parentItem = itemFromIndex(parent);
+    if (!parentItem) {
+        return false;
+    }
+
+    // Only allow drops onto collections
+    ItemType parentType = static_cast<ItemType>(parentItem->data(ItemTypeRole).toInt());
+    if (parentType != CollectionItem) {
+        qDebug() << "[SceneHierarchyModel] Can only drop onto collections";
+        return false;
+    }
+
+    QString targetCollectionUuid = parentItem->data(UuidRole).toString();
+
+    qDebug() << "[SceneHierarchyModel] Drop:" << (type == ObjectItem ? "Object" : "Collection")
+             << "UUID:" << uuid << "to collection:" << targetCollectionUuid;
+
+    // Emit signal to panel - it will handle the actual reassignment
+    emit itemDropped(uuid, targetCollectionUuid, typeInt);
+
+    // Return false so Qt doesn't modify the tree
+    // The panel will rebuild the tree after reassigning collections
+    return false;
+}
+
+Qt::DropActions SceneHierarchyModel::supportedDropActions() const
+{
+    return Qt::MoveAction;
+}
 
 //==============================================================================
 // VisibilityDelegate Implementation
@@ -147,7 +273,7 @@ void SceneHierarchyPanel::setupUI()
     m_treeView->setExpandsOnDoubleClick(false);
 
     // Model
-    m_model = new QStandardItemModel(this);
+    m_model = new SceneHierarchyModel(this);
     m_model->setHorizontalHeaderLabels({"Name", "Visibility"});
     m_treeView->setModel(m_model);
 
@@ -172,6 +298,10 @@ void SceneHierarchyPanel::setupConnections()
     // Visibility delegate
     connect(m_visibilityDelegate, &VisibilityDelegate::visibilityToggled,
             this, &SceneHierarchyPanel::onVisibilityToggled);
+
+    // Model drag & drop
+    connect(m_model, &SceneHierarchyModel::itemDropped,
+            this, &SceneHierarchyPanel::onItemDropped);
 
     // ObjectManager signals
     if (m_objectManager) {
@@ -199,6 +329,7 @@ void SceneHierarchyPanel::addCollectionToTree(Collection* collection, QStandardI
     QStandardItem* nameItem = new QStandardItem(collection->name());
     nameItem->setData(QVariant::fromValue((void*)collection), CollectionRole);
     nameItem->setData(CollectionItem, ItemTypeRole);
+    nameItem->setData(collection->uuid().toString(), UuidRole);  // Store UUID for drag & drop
     nameItem->setEditable(false);
 
     QStandardItem* visItem = new QStandardItem();
@@ -225,6 +356,7 @@ void SceneHierarchyPanel::addObjectToTree(SceneObject* object, QStandardItem* pa
     QStandardItem* nameItem = new QStandardItem(object->name());
     nameItem->setData(QVariant::fromValue((void*)object), ObjectRole);
     nameItem->setData(ObjectItem, ItemTypeRole);
+    nameItem->setData(object->uuid().toString(), UuidRole);  // Store UUID for drag & drop
     nameItem->setEditable(false);
 
     QStandardItem* visItem = new QStandardItem();
@@ -400,6 +532,131 @@ void SceneHierarchyPanel::onObjectRemoved(SceneObject* object)
         m_sceneCollection->removeObject(object);
         rebuildTree();
     }
+}
+
+void SceneHierarchyPanel::onItemDropped(const QString& itemUuid, const QString& targetCollectionUuid, int itemType)
+{
+    qDebug() << "[SceneHierarchyPanel] Handling drop:" << itemUuid << "to collection:" << targetCollectionUuid;
+
+    // Find target collection
+    Collection* targetCollection = findCollectionByUuid(targetCollectionUuid, m_sceneCollection);
+    if (!targetCollection) {
+        qDebug() << "[SceneHierarchyPanel] Target collection not found!";
+        return;
+    }
+
+    if (itemType == ObjectItem) {
+        // Moving an object
+        SceneObject* object = findObjectByUuid(itemUuid);
+        if (!object) {
+            qDebug() << "[SceneHierarchyPanel] Object not found!";
+            return;
+        }
+
+        // Remove from all collections
+        removeObjectFromAllCollections(object, m_sceneCollection);
+
+        // Add to target collection
+        targetCollection->addObject(object);
+
+        qDebug() << "[SceneHierarchyPanel] Moved object" << object->name() << "to collection" << targetCollection->name();
+
+    } else if (itemType == CollectionItem) {
+        // Moving a collection
+        Collection* collection = findCollectionByUuid(itemUuid, m_sceneCollection);
+        if (!collection) {
+            qDebug() << "[SceneHierarchyPanel] Source collection not found!";
+            return;
+        }
+
+        // Can't drop a collection onto itself or its descendants
+        if (collection == targetCollection || isDescendantOf(targetCollection, collection)) {
+            qDebug() << "[SceneHierarchyPanel] Cannot drop collection onto itself or descendant!";
+            return;
+        }
+
+        // Remove from current parent
+        if (collection->parentCollection()) {
+            collection->parentCollection()->removeChildCollection(collection);
+        }
+
+        // Add to target collection
+        targetCollection->addChildCollection(collection);
+
+        qDebug() << "[SceneHierarchyPanel] Moved collection" << collection->name() << "to collection" << targetCollection->name();
+    }
+
+    // Rebuild tree to show new structure
+    rebuildTree();
+    m_treeView->expandAll();
+}
+
+Collection* SceneHierarchyPanel::findCollectionByUuid(const QString& uuidStr, Collection* root)
+{
+    if (!root) {
+        root = m_sceneCollection;
+    }
+
+    if (!root) {
+        return nullptr;
+    }
+
+    // Check if this is the collection we're looking for
+    if (root->uuid().toString() == uuidStr) {
+        return root;
+    }
+
+    // Search child collections recursively
+    for (Collection* child : root->childCollections()) {
+        Collection* found = findCollectionByUuid(uuidStr, child);
+        if (found) {
+            return found;
+        }
+    }
+
+    return nullptr;
+}
+
+SceneObject* SceneHierarchyPanel::findObjectByUuid(const QString& uuidStr)
+{
+    if (!m_objectManager) {
+        return nullptr;
+    }
+
+    QUuid uuid(uuidStr);
+    return m_objectManager->findByUuid(uuid);
+}
+
+void SceneHierarchyPanel::removeObjectFromAllCollections(SceneObject* object, Collection* root)
+{
+    if (!root) {
+        return;
+    }
+
+    // Remove from this collection
+    root->removeObject(object);
+
+    // Remove from child collections recursively
+    for (Collection* child : root->childCollections()) {
+        removeObjectFromAllCollections(object, child);
+    }
+}
+
+bool SceneHierarchyPanel::isDescendantOf(Collection* potential, Collection* ancestor)
+{
+    if (!potential || !ancestor) {
+        return false;
+    }
+
+    Collection* current = potential->parentCollection();
+    while (current) {
+        if (current == ancestor) {
+            return true;
+        }
+        current = current->parentCollection();
+    }
+
+    return false;
 }
 
 QStandardItem* SceneHierarchyPanel::findItemByObject(SceneObject* object)

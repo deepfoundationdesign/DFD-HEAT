@@ -36,6 +36,27 @@ signals:
 };
 
 /**
+ * @brief Custom model for drag & drop support with UUID-based serialization
+ */
+class SceneHierarchyModel : public QStandardItemModel
+{
+    Q_OBJECT
+
+public:
+    explicit SceneHierarchyModel(QObject* parent = nullptr);
+
+    // Override drag & drop methods to use UUIDs instead of serializing void*
+    QStringList mimeTypes() const override;
+    QMimeData* mimeData(const QModelIndexList& indexes) const override;
+    bool dropMimeData(const QMimeData* data, Qt::DropAction action,
+                     int row, int column, const QModelIndex& parent) override;
+    Qt::DropActions supportedDropActions() const override;
+
+signals:
+    void itemDropped(const QString& itemUuid, const QString& targetCollectionUuid, int itemType);
+};
+
+/**
  * @brief Scene Hierarchy Panel - Blender-style outliner for objects and collections
  */
 class SceneHierarchyPanel : public QWidget
@@ -66,6 +87,7 @@ private slots:
     void onItemDoubleClicked(const QModelIndex& index);
     void onCustomContextMenu(const QPoint& pos);
     void onVisibilityToggled(const QModelIndex& index);
+    void onItemDropped(const QString& itemUuid, const QString& targetCollectionUuid, int itemType);
 
     // ObjectManager signals
     void onObjectAdded(SceneObject* object);
@@ -83,9 +105,15 @@ private:
     QStandardItem* findItemByObject(SceneObject* object);
     QStandardItem* findItemByCollection(Collection* collection);
 
+    // UUID lookup helpers
+    Collection* findCollectionByUuid(const QString& uuidStr, Collection* root = nullptr);
+    SceneObject* findObjectByUuid(const QString& uuidStr);
+    void removeObjectFromAllCollections(SceneObject* object, Collection* root);
+    bool isDescendantOf(Collection* potential, Collection* ancestor);
+
     // UI components
     QTreeView* m_treeView;
-    QStandardItemModel* m_model;
+    SceneHierarchyModel* m_model;
     VisibilityDelegate* m_visibilityDelegate;
 
     // Data
