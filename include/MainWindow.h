@@ -16,6 +16,7 @@ QT_END_NAMESPACE
 
 class Viewport3D;
 class AuthManager;
+class PropertiesPanel;
 
 class MainWindow : public QMainWindow
 {
@@ -53,7 +54,7 @@ private:
 
     // Dock contents
     QTreeWidget *m_projectTree;
-    QTableWidget *m_propertiesTable;
+    PropertiesPanel *m_propertiesPanel;
     QTreeWidget *m_materialsTree;
     QTableWidget *m_boundaryTable;
     QTextEdit *m_consoleOutput;

@@ -1,6 +1,8 @@
 #include "SceneObject.h"
 #include "MeshData.h"
 #include <Qt3DRender/QGeometryRenderer>
+#include <Qt3DRender/QObjectPicker>
+#include <Qt3DRender/QPickEvent>
 #include <Qt3DExtras/QPhongMaterial>
 #include <QDebug>
 
@@ -11,6 +13,7 @@ SceneObject::SceneObject(Qt3DCore::QNode *parent)
     , m_transform(new Qt3DCore::QTransform(this))
     , m_material(nullptr)
     , m_renderer(nullptr)
+    , m_picker(new Qt3DRender::QObjectPicker(this))
     , m_meshData(new MeshData())
     , m_dimensions(1.0f, 1.0f, 1.0f)
     , m_name(QString("Object_%1").arg(++s_objectCounter))
@@ -22,6 +25,16 @@ SceneObject::SceneObject(Qt3DCore::QNode *parent)
 {
     // Add transform component
     addComponent(m_transform);
+
+    // Setup object picker for mouse selection
+    m_picker->setEnabled(true);
+    m_picker->setHoverEnabled(false);  // We only care about clicks, not hover
+    addComponent(m_picker);
+
+    // Connect picker signal to our slot (using lambda to ignore QPickEvent* parameter)
+    connect(m_picker, &Qt3DRender::QObjectPicker::clicked, this, [this]() {
+        this->onObjectClicked();
+    });
 
     qDebug() << "SceneObject created:" << m_name << "UUID:" << m_uuid.toString();
 }
@@ -198,4 +211,10 @@ void SceneObject::setSelected(bool selected)
             }
         }
     }
+}
+
+void SceneObject::onObjectClicked()
+{
+    qDebug() << "Object clicked:" << m_name;
+    emit clicked(this);
 }

@@ -145,6 +145,10 @@ void Viewport3D::setupObjectSystem()
     m_objectManager = std::make_unique<ObjectManager>(m_rootEntity, this);
     m_selectionManager = std::make_unique<SelectionManager>(this);
 
+    // Connect ObjectManager signals to handle new objects
+    connect(m_objectManager.get(), &ObjectManager::objectAdded,
+            this, &Viewport3D::onObjectAdded);
+
     qDebug() << "Object system initialized";
 }
 
@@ -231,4 +235,28 @@ void Viewport3D::onPanRequested(int deltaX, int deltaY)
 void Viewport3D::onZoomRequested(float delta)
 {
     m_controller->zoom(delta);
+}
+
+void Viewport3D::onObjectClicked(SceneObject* object)
+{
+    if (!object || !m_selectionManager) {
+        return;
+    }
+
+    qDebug() << "Viewport received click on object:" << object->name();
+
+    // TODO: Check for Shift modifier for multi-select
+    // For now, single selection only
+    m_selectionManager->selectObject(object, false);
+}
+
+void Viewport3D::onObjectAdded(SceneObject* object)
+{
+    if (!object) {
+        return;
+    }
+
+    // Connect the object's clicked signal to our handler
+    connect(object, &SceneObject::clicked, this, &Viewport3D::onObjectClicked);
+    qDebug() << "Connected click handler for object:" << object->name();
 }

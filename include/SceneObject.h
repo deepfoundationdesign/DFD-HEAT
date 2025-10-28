@@ -12,6 +12,7 @@ class MeshData;
 namespace Qt3DRender {
     class QMaterial;
     class QGeometryRenderer;
+    class QObjectPicker;
 }
 
 /**
@@ -73,18 +74,23 @@ signals:
     void transformChanged();
     void propertiesChanged();
     void selectionChanged(bool selected);
+    void clicked(SceneObject* object);
 
 protected:
     // Components (for derived classes to set up)
     Qt3DCore::QTransform* m_transform;
     Qt3DRender::QMaterial* m_material;
     Qt3DRender::QGeometryRenderer* m_renderer;
+    Qt3DRender::QObjectPicker* m_picker;
 
     // Mesh data
     MeshData* m_meshData;
 
     // Derived classes implement mesh generation
     virtual void generateMesh() = 0;
+
+private slots:
+    void onObjectClicked();
 
 private:
     // Transform

@@ -1,6 +1,9 @@
 #include "MainWindow.h"
 #include "Viewport3D.h"
 #include "AuthManager.h"
+#include "PropertiesPanel.h"
+#include "SelectionManager.h"
+#include "SceneObject.h"
 
 #include <QMenuBar>
 #include <QToolBar>
@@ -184,11 +187,20 @@ void MainWindow::createDockWindows()
 
     // Properties dock
     m_propertiesDock = new QDockWidget(tr("Properties"), this);
-    m_propertiesTable = new QTableWidget();
-    m_propertiesTable->setColumnCount(2);
-    m_propertiesTable->setHorizontalHeaderLabels(QStringList() << "Property" << "Value");
-    m_propertiesDock->setWidget(m_propertiesTable);
+    m_propertiesPanel = new PropertiesPanel();
+    m_propertiesDock->setWidget(m_propertiesPanel);
     addDockWidget(Qt::RightDockWidgetArea, m_propertiesDock);
+
+    // Connect selection changes to properties panel
+    connect(m_viewport3D->selectionManager(), &SelectionManager::selectionChanged,
+            this, [this]() {
+        SceneObject* selected = m_viewport3D->selectionManager()->activeObject();
+        if (selected) {
+            m_propertiesPanel->setObject(selected);
+        } else {
+            m_propertiesPanel->clearObject();
+        }
+    });
 
     // Materials dock
     m_materialsDock = new QDockWidget(tr("Materials"), this);

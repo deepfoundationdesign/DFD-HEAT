@@ -52,6 +52,8 @@ private slots:
     void onOrbitRequested(int deltaX, int deltaY);
     void onPanRequested(int deltaX, int deltaY);
     void onZoomRequested(float delta);
+    void onObjectClicked(SceneObject* object);
+    void onObjectAdded(SceneObject* object);
 
 private:
     void setupScene();
