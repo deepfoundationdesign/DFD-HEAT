@@ -49,6 +49,7 @@ Viewport3D::Viewport3D(QWidget *parent)
     connect(m_view, &Custom3DWindow::zoomRequested, this, &Viewport3D::onZoomRequested);
 
     // Connect fly mode signals
+    qDebug() << "[Viewport3D] Connecting fly mode signals...";
     connect(m_view, &Custom3DWindow::flyModeToggleRequested, m_controller.get(), &ViewportController::toggleFlyMode);
     connect(m_view, &Custom3DWindow::keyPressed, m_controller.get(), &ViewportController::handleKeyPress);
     connect(m_view, &Custom3DWindow::keyReleased, m_controller.get(), &ViewportController::handleKeyRelease);
@@ -59,6 +60,7 @@ Viewport3D::Viewport3D(QWidget *parent)
 
     // Update crosshairs visibility when fly mode toggles
     connect(m_controller.get(), &ViewportController::flyModeToggled, this, &Viewport3D::onFlyModeToggled);
+    qDebug() << "[Viewport3D] Fly mode signals connected";
 
     setupScene();
 }
@@ -280,7 +282,11 @@ void Viewport3D::onObjectAdded(SceneObject* object)
 
 void Viewport3D::onFlyModeToggled(bool active)
 {
+    qDebug() << "[Viewport3D::onFlyModeToggled] Fly mode toggled! Active:" << active;
     if (m_crosshairs) {
         m_crosshairs->setVisible(active);
+        qDebug() << "  Crosshairs visibility set to:" << active;
+    } else {
+        qDebug() << "  WARNING: m_crosshairs is null!";
     }
 }

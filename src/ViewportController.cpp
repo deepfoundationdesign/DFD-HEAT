@@ -260,9 +260,15 @@ QVector3D ViewportController::screenToWorld(const QPoint &screenPos)
 
 void ViewportController::toggleFlyMode()
 {
+    qDebug() << "[ViewportController::toggleFlyMode] Called! Current state:" << m_flyModeActive;
+
     m_flyModeActive = !m_flyModeActive;
 
+    qDebug() << "[ViewportController::toggleFlyMode] New state:" << m_flyModeActive;
+
     if (m_flyModeActive) {
+        qDebug() << "  FLY MODE ACTIVATED";
+
         // Initialize fly mode from current camera position
         m_flyPosition = m_camera->position();
 
@@ -271,10 +277,15 @@ void ViewportController::toggleFlyMode()
         m_yaw = qRadiansToDegrees(qAtan2(forward.x(), forward.z()));
         m_pitch = qRadiansToDegrees(qAsin(-forward.y()));
 
+        qDebug() << "  Initial position:" << m_flyPosition;
+        qDebug() << "  Initial yaw:" << m_yaw << "pitch:" << m_pitch;
+
         // Start the update timer
         m_flyModeTimer->start();
 
     } else {
+        qDebug() << "  FLY MODE DEACTIVATED";
+
         // Stop the update timer
         m_flyModeTimer->stop();
 
@@ -293,9 +304,12 @@ void ViewportController::toggleFlyMode()
             m_azimuth = qRadiansToDegrees(qAtan2(offset.x(), offset.z()));
             m_elevation = qRadiansToDegrees(qAsin(offset.y() / m_radius));
         }
+
+        qDebug() << "  Returned to orbit mode";
     }
 
     emit flyModeToggled(m_flyModeActive);
+    qDebug() << "  flyModeToggled signal emitted with value:" << m_flyModeActive;
 }
 
 void ViewportController::handleKeyPress(int key)

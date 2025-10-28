@@ -117,8 +117,17 @@ void Custom3DWindow::wheelEvent(QWheelEvent *event)
 
 void Custom3DWindow::keyPressEvent(QKeyEvent *event)
 {
-    // Handle backtick key (grave accent) for fly mode toggle
-    if (event->key() == Qt::Key_QuoteLeft && !event->isAutoRepeat()) {
+    qDebug() << "[Custom3DWindow::keyPressEvent] Key pressed:" << event->key()
+             << "Text:" << event->text()
+             << "IsAutoRepeat:" << event->isAutoRepeat()
+             << "Qt::Key_QuoteLeft (numeric) =" << (int)Qt::Key_QuoteLeft;
+
+    // Handle fly mode toggle keys
+    // Qt::Key_QuoteLeft = 96 (backtick ` on US keyboards)
+    // Key code 16781906 appears to be the ^ (caret) key on German keyboards
+    if (!event->isAutoRepeat() &&
+        (event->key() == Qt::Key_QuoteLeft || event->key() == 16781906)) {
+        qDebug() << "[Custom3DWindow] Fly mode toggle key detected! Emitting flyModeToggleRequested()";
         emit flyModeToggleRequested();
         event->accept();
         return;
