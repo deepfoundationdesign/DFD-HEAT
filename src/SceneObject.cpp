@@ -31,9 +31,12 @@ SceneObject::SceneObject(Qt3DCore::QNode *parent)
     m_picker->setHoverEnabled(false);  // We only care about clicks, not hover
     addComponent(m_picker);
 
-    // Connect picker signal to our slot (using lambda to ignore QPickEvent* parameter)
-    connect(m_picker, &Qt3DRender::QObjectPicker::clicked, this, [this]() {
-        this->onObjectClicked();
+    // Connect picker signal to our slot (only respond to left mouse button)
+    connect(m_picker, &Qt3DRender::QObjectPicker::clicked, this, [this](Qt3DRender::QPickEvent* event) {
+        // Only select on left mouse button (not middle or right)
+        if (event && event->button() == Qt3DRender::QPickEvent::LeftButton) {
+            this->onObjectClicked();
+        }
     });
 
     qDebug() << "SceneObject created:" << m_name << "UUID:" << m_uuid.toString();
