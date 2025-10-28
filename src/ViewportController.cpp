@@ -19,14 +19,17 @@ ViewportController::ViewportController(Qt3DRender::QCamera *camera, QObject *par
     , m_orbitSpeed(0.5f)
     , m_panSpeed(0.01f)
     , m_zoomSpeed(0.1f)
-    , m_radius(10.0f)
-    , m_azimuth(45.0f)
-    , m_elevation(30.0f)
+    , m_radius(17.3205f)  // sqrt(10^2 + 10^2 + 10^2) for position (10, 10, 10)
+    , m_azimuth(45.0f)    // Equal X and Z components
+    , m_elevation(35.264f) // arcsin(10/17.3205) for Y=10
     , m_target(0, 0, 0)
     , m_mousePressed(false)
     , m_middleMousePressed(false)
     , m_activeButton(Qt::NoButton)
 {
+    qDebug() << "[ViewportController] Initialized with spherical coords for camera at (10, 10, 10):";
+    qDebug() << "  radius=" << m_radius << "azimuth=" << m_azimuth << "° elevation=" << m_elevation << "°";
+
     if (m_camera) {
         updateCameraPosition();
     }
@@ -59,6 +62,7 @@ void ViewportController::orbit(const QPoint &pos)
     if (!m_mousePressed || !m_camera) return;
 
     QPoint delta = pos - m_lastMousePos;
+    qDebug() << "[ViewportController::orbit] pos=" << pos << "lastPos=" << m_lastMousePos << "delta=" << delta;
 
     // Blender-style orbit (horizontal and vertical)
     m_azimuth -= delta.x() * m_orbitSpeed * m_settings->orbitSensitivity();
@@ -82,6 +86,7 @@ void ViewportController::pan(const QPoint &pos)
     if (!m_middleMousePressed || !m_camera) return;
 
     QPoint delta = pos - m_lastMousePos;
+    qDebug() << "[ViewportController::pan] pos=" << pos << "lastPos=" << m_lastMousePos << "delta=" << delta;
 
     // Apply pan deltas (X inverted, Y normal for natural panning)
     float deltaX = -delta.x() * m_panSpeed * m_settings->panSensitivity();
@@ -107,10 +112,15 @@ void ViewportController::zoom(float delta)
 {
     if (!m_camera) return;
 
+    qDebug() << "[ViewportController::zoom] delta=" << delta;
+    qDebug() << "  Old radius:" << m_radius;
+
     // Blender-style zoom (scroll up = zoom in, scroll down = zoom out)
     float zoomFactor = 1.0f - (delta * m_zoomSpeed * m_settings->zoomSensitivity());
     m_radius *= zoomFactor;
     m_radius = qBound(0.1f, m_radius, 1000.0f);
+
+    qDebug() << "  New radius:" << m_radius << "(zoom factor:" << zoomFactor << ")";
 
     updateCameraPosition();
 }
@@ -175,6 +185,13 @@ void ViewportController::updateCameraPosition()
 {
     if (!m_camera) return;
 
+    // DEBUG: Log camera state before update
+    QVector3D oldPos = m_camera->position();
+    qDebug() << "[ViewportController] updateCameraPosition() called";
+    qDebug() << "  Current camera position:" << oldPos;
+    qDebug() << "  Spherical coords: radius=" << m_radius
+             << "azimuth=" << m_azimuth << "° elevation=" << m_elevation << "°";
+
     // Convert spherical to Cartesian coordinates
     float azimuthRad = qDegreesToRadians(m_azimuth);
     float elevationRad = qDegreesToRadians(m_elevation);
@@ -184,6 +201,13 @@ void ViewportController::updateCameraPosition()
     float z = m_radius * qCos(elevationRad) * qCos(azimuthRad);
 
     QVector3D cameraPos = m_target + QVector3D(x, y, z);
+
+    // DEBUG: Log new position and delta
+    QVector3D delta = cameraPos - oldPos;
+    qDebug() << "  Calculated new position:" << cameraPos;
+    qDebug() << "  Delta (movement):" << delta;
+    qDebug() << "  Delta magnitude:" << delta.length();
+
     m_camera->setPosition(cameraPos);
     m_camera->setViewCenter(m_target);
 

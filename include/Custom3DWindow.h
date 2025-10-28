@@ -36,6 +36,7 @@ private:
     QPoint m_lastMousePos;
     bool m_orbiting;
     bool m_panning;
+    bool m_firstInteraction;  // Track first mouse interaction to avoid initial jump
 };
 
 #endif // CUSTOM3DWINDOW_H

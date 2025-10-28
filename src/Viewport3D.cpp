@@ -73,10 +73,8 @@ void Viewport3D::setupScene()
         settings->farPlane()
     );
 
-    // Set initial camera position
-    camera->setPosition(QVector3D(10, 10, 10));
-    camera->setViewCenter(QVector3D(0, 0, 0));
-    camera->setUpVector(QVector3D(0, 1, 0));
+    // Camera position is now managed by ViewportController
+    // No manual camera positioning needed - ViewportController sets it via spherical coords
 
     // Set background color (dark gray like Blender) - will be implemented differently
 

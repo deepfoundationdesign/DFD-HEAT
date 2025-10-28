@@ -9,6 +9,7 @@ Custom3DWindow::Custom3DWindow(QScreen *screen)
     , m_shiftPressed(false)
     , m_orbiting(false)
     , m_panning(false)
+    , m_firstInteraction(true)
 {
     // Enable mouse tracking to get move events even without buttons pressed
     setMouseGrabEnabled(true);
@@ -55,7 +56,14 @@ void Custom3DWindow::mouseMoveEvent(QMouseEvent *event)
     }
 
     if (m_middlePressed && (m_orbiting || m_panning)) {
-        QPoint delta = event->pos() - m_lastMousePos;
+        // On first interaction, set delta to zero to avoid initial jump
+        QPoint delta;
+        if (m_firstInteraction) {
+            delta = QPoint(0, 0);
+            m_firstInteraction = false;
+        } else {
+            delta = event->pos() - m_lastMousePos;
+        }
 
         if (m_orbiting) {
             emit orbitRequested(delta.x(), delta.y());
