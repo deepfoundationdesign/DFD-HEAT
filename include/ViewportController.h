@@ -77,6 +77,7 @@ public:
 private:
     void updateCameraPosition();
     void updateFlyCamera();  // Update camera for fly mode
+    void updateFlyCameraOrientation();  // Update camera orientation immediately (for mouse look)
     QVector3D screenToWorld(const QPoint &screenPos);
 
     Qt3DRender::QCamera *m_camera;

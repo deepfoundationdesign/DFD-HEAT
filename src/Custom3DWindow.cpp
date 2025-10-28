@@ -1,6 +1,7 @@
 #include "Custom3DWindow.h"
 #include <QDebug>
 #include <QApplication>
+#include <QCursor>
 
 Custom3DWindow::Custom3DWindow(QScreen *screen)
     : Qt3DExtras::Qt3DWindow(screen)
@@ -16,9 +17,25 @@ Custom3DWindow::Custom3DWindow(QScreen *screen)
 
     // Set dark background color like Blender
     defaultFrameGraph()->setClearColor(QColor(60, 60, 60));
+
+    // Initialize mouse position to center of screen
+    m_lastMousePos = QPoint(width() / 2, height() / 2);
 }
 
 Custom3DWindow::~Custom3DWindow() = default;
+
+void Custom3DWindow::setFlyMode(bool enabled)
+{
+    qDebug() << "[Custom3DWindow::setFlyMode] Setting fly mode to:" << enabled;
+    m_flyMode = enabled;
+
+    if (m_flyMode) {
+        // Initialize mouse position to current position when entering fly mode
+        m_lastMousePos = QCursor::pos();
+        m_lastMousePos = mapFromGlobal(m_lastMousePos);
+        qDebug() << "  Initialized mouse position to:" << m_lastMousePos;
+    }
+}
 
 void Custom3DWindow::mousePressEvent(QMouseEvent *event)
 {
@@ -58,6 +75,7 @@ void Custom3DWindow::mouseMoveEvent(QMouseEvent *event)
     // Fly mode mouse look (always active when in fly mode)
     if (m_flyMode) {
         QPoint delta = event->pos() - m_lastMousePos;
+        qDebug() << "[Custom3DWindow::mouseMoveEvent] Fly mode mouse look - delta:" << delta;
         emit mouseLookRequested(delta.x(), delta.y());
         m_lastMousePos = event->pos();
         event->accept();

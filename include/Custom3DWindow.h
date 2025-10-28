@@ -18,7 +18,8 @@ public:
 
     // Blender-style controls
     void setBlenderStyleNavigation(bool enabled) { m_blenderStyle = enabled; }
-    void setFlyMode(bool enabled) { m_flyMode = enabled; }
+    void setFlyMode(bool enabled);
+    bool flyMode() const { return m_flyMode; }
 
 signals:
     void orbitRequested(int deltaX, int deltaY);

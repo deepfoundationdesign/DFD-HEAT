@@ -340,6 +340,36 @@ void ViewportController::handleMouseLook(int deltaX, int deltaY)
     // Normalize yaw to 0-360 range
     while (m_yaw < 0.0f) m_yaw += 360.0f;
     while (m_yaw >= 360.0f) m_yaw -= 360.0f;
+
+    // Update camera orientation IMMEDIATELY for responsive mouse look
+    updateFlyCameraOrientation();
+}
+
+void ViewportController::updateFlyCameraOrientation()
+{
+    if (!m_flyModeActive || !m_camera) return;
+
+    // Calculate camera direction vectors from yaw and pitch
+    float yawRad = qDegreesToRadians(m_yaw);
+    float pitchRad = qDegreesToRadians(m_pitch);
+
+    // Forward vector (direction camera is looking)
+    QVector3D forward(
+        qSin(yawRad) * qCos(pitchRad),
+        -qSin(pitchRad),
+        qCos(yawRad) * qCos(pitchRad)
+    );
+    forward.normalize();
+
+    // Update camera view center (where it's looking)
+    // View center is always 1 unit in front of the camera position
+    QVector3D viewCenter = m_flyPosition + forward;
+    m_camera->setViewCenter(viewCenter);
+
+    // Keep up vector as world up
+    m_camera->setUpVector(QVector3D(0, 1, 0));
+
+    emit cameraChanged();
 }
 
 void ViewportController::updateFlyCamera()
@@ -391,12 +421,6 @@ void ViewportController::updateFlyCamera()
     // Update camera position
     m_camera->setPosition(m_flyPosition);
 
-    // Update camera view center (where it's looking)
-    QVector3D viewCenter = m_flyPosition + forward;
-    m_camera->setViewCenter(viewCenter);
-
-    // Keep up vector as world up
-    m_camera->setUpVector(QVector3D(0, 1, 0));
-
-    emit cameraChanged();
+    // Update camera orientation (view center based on current yaw/pitch)
+    updateFlyCameraOrientation();
 }

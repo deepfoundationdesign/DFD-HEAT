@@ -10,6 +10,7 @@
 #include "SceneObject.h"
 #include "BoxObject.h"
 #include "CrosshairsOverlay.h"
+#include "CrosshairsEntity3D.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QCamera>
@@ -20,6 +21,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QDebug>
+#include <QResizeEvent>
 
 Viewport3D::Viewport3D(QWidget *parent)
     : QWidget(parent)
@@ -29,6 +31,7 @@ Viewport3D::Viewport3D(QWidget *parent)
     , m_grid(nullptr)
     , m_axis(nullptr)
     , m_crosshairs(nullptr)
+    , m_crosshairs3D(nullptr)
 {
     // Create container widget for our custom Qt3D window
     QWidget *container = QWidget::createWindowContainer(m_view);
@@ -36,10 +39,14 @@ Viewport3D::Viewport3D(QWidget *parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(container);
 
-    // Create crosshairs overlay on top of 3D view
-    m_crosshairs = new CrosshairsOverlay(container);
-    m_crosshairs->setGeometry(container->rect());
+    // Create crosshairs overlay as a child of THIS widget (not the OpenGL container)
+    // This allows proper compositing over the 3D view
+    m_crosshairs = new CrosshairsOverlay(this);
+    m_crosshairs->setGeometry(0, 0, width(), height());
     m_crosshairs->raise();  // Ensure it's on top
+    m_crosshairs->setAttribute(Qt::WA_TransparentForMouseEvents);
+    qDebug() << "[Viewport3D] Crosshairs created with geometry:" << m_crosshairs->geometry()
+             << "Viewport size:" << size();
 
     m_view->setRootEntity(m_rootEntity);
 
@@ -104,7 +111,24 @@ void Viewport3D::setupScene()
     setupGrid();
     setupAxis();
     setupObjectSystem();
+    setupCrosshairs();
     createTestCube();
+}
+
+void Viewport3D::setupCrosshairs()
+{
+    // Create Qt3D-based crosshairs entity
+    // Attach to camera so crosshairs always stay centered
+    m_crosshairs3D = new CrosshairsEntity3D(m_view->camera());
+
+    // Position crosshairs in front of camera (in camera space)
+    auto* transform = new Qt3DCore::QTransform(m_crosshairs3D);
+    transform->setTranslation(QVector3D(0, 0, -1.0f));  // 1 unit in front of camera
+    m_crosshairs3D->addComponent(transform);
+
+    m_crosshairs3D->setVisible(false);  // Hidden by default
+
+    qDebug() << "[Viewport3D] Created Qt3D crosshairs entity";
 }
 
 void Viewport3D::setupLighting()
@@ -283,10 +307,28 @@ void Viewport3D::onObjectAdded(SceneObject* object)
 void Viewport3D::onFlyModeToggled(bool active)
 {
     qDebug() << "[Viewport3D::onFlyModeToggled] Fly mode toggled! Active:" << active;
+
+    // Toggle Qt3D crosshairs (proper solution)
+    if (m_crosshairs3D) {
+        m_crosshairs3D->setVisible(active);
+        qDebug() << "  Qt3D crosshairs visibility set to:" << active;
+    } else {
+        qDebug() << "  WARNING: m_crosshairs3D is null!";
+    }
+
+    // Old widget-based crosshairs (doesn't work with createWindowContainer, kept for reference)
     if (m_crosshairs) {
         m_crosshairs->setVisible(active);
-        qDebug() << "  Crosshairs visibility set to:" << active;
-    } else {
-        qDebug() << "  WARNING: m_crosshairs is null!";
+    }
+}
+
+void Viewport3D::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+
+    // Update crosshairs to match new size (now it's a direct child of this widget)
+    if (m_crosshairs) {
+        m_crosshairs->setGeometry(0, 0, width(), height());
+        qDebug() << "[Viewport3D::resizeEvent] Updated crosshairs geometry to:" << m_crosshairs->geometry();
     }
 }

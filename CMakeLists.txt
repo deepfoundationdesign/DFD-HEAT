@@ -27,6 +27,7 @@ set(SOURCES
     src/SelectionManager.cpp
     src/PropertiesPanel.cpp
     src/CrosshairsOverlay.cpp
+    src/CrosshairsEntity3D.cpp
 )
 
 set(HEADERS
@@ -46,6 +47,7 @@ set(HEADERS
     include/SelectionManager.h
     include/PropertiesPanel.h
     include/CrosshairsOverlay.h
+    include/CrosshairsEntity3D.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

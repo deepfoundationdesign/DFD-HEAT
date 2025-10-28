@@ -19,6 +19,7 @@ class ObjectManager;
 class SelectionManager;
 class SceneObject;
 class CrosshairsOverlay;
+class CrosshairsEntity3D;
 
 class Viewport3D : public QWidget
 {
@@ -48,6 +49,7 @@ signals:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void onOrbitRequested(int deltaX, int deltaY);
@@ -64,6 +66,7 @@ private:
     void setupLighting();
     void setupGrid();
     void setupAxis();
+    void setupCrosshairs();
 
     Custom3DWindow *m_view;
     Qt3DCore::QEntity *m_rootEntity;
@@ -75,7 +78,8 @@ private:
 
     GridEntity *m_grid;
     AxisEntity *m_axis;
-    CrosshairsOverlay *m_crosshairs;
+    CrosshairsOverlay *m_crosshairs;  // Old widget-based (doesn't work with createWindowContainer)
+    CrosshairsEntity3D *m_crosshairs3D;  // New Qt3D-based crosshairs
 };
 
 #endif // VIEWPORT3D_H
