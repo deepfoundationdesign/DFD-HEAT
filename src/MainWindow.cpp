@@ -2,8 +2,10 @@
 #include "Viewport3D.h"
 #include "AuthManager.h"
 #include "PropertiesPanel.h"
+#include "SceneHierarchyPanel.h"
 #include "SelectionManager.h"
 #include "SceneObject.h"
+#include "ObjectManager.h"
 
 #include <QMenuBar>
 #include <QToolBar>
@@ -215,13 +217,15 @@ void MainWindow::createDockWindows()
     m_materialsDock->setWidget(m_materialsTree);
     addDockWidget(Qt::RightDockWidgetArea, m_materialsDock);
 
-    // Boundary conditions dock
-    m_boundaryDock = new QDockWidget(tr("Boundary Conditions"), this);
-    m_boundaryTable = new QTableWidget();
-    m_boundaryTable->setColumnCount(3);
-    m_boundaryTable->setHorizontalHeaderLabels(QStringList() << "Face" << "Type" << "Value");
-    m_boundaryDock->setWidget(m_boundaryTable);
-    addDockWidget(Qt::LeftDockWidgetArea, m_boundaryDock);
+    // Scene Hierarchy dock (replaces Boundary Conditions)
+    m_sceneHierarchyDock = new QDockWidget(tr("Scene Hierarchy"), this);
+    m_sceneHierarchyPanel = new SceneHierarchyPanel(
+        m_viewport3D->objectManager(),
+        m_viewport3D->selectionManager(),
+        this
+    );
+    m_sceneHierarchyDock->setWidget(m_sceneHierarchyPanel);
+    addDockWidget(Qt::LeftDockWidgetArea, m_sceneHierarchyDock);
 
     // Console dock
     m_consoleDock = new QDockWidget(tr("Console"), this);
@@ -231,7 +235,7 @@ void MainWindow::createDockWindows()
     addDockWidget(Qt::BottomDockWidgetArea, m_consoleDock);
 
     // Tabify some docks
-    tabifyDockWidget(m_projectDock, m_boundaryDock);
+    tabifyDockWidget(m_projectDock, m_sceneHierarchyDock);
     tabifyDockWidget(m_propertiesDock, m_materialsDock);
 }
 

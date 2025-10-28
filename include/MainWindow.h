@@ -17,6 +17,7 @@ QT_END_NAMESPACE
 class Viewport3D;
 class AuthManager;
 class PropertiesPanel;
+class SceneHierarchyPanel;
 
 class MainWindow : public QMainWindow
 {
@@ -49,14 +50,14 @@ private:
     QDockWidget *m_projectDock;
     QDockWidget *m_propertiesDock;
     QDockWidget *m_materialsDock;
-    QDockWidget *m_boundaryDock;
+    QDockWidget *m_sceneHierarchyDock;
     QDockWidget *m_consoleDock;
 
     // Dock contents
     QTreeWidget *m_projectTree;
     PropertiesPanel *m_propertiesPanel;
     QTreeWidget *m_materialsTree;
-    QTableWidget *m_boundaryTable;
+    SceneHierarchyPanel *m_sceneHierarchyPanel;
     QTextEdit *m_consoleOutput;
 
     // Menus

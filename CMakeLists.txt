@@ -28,6 +28,8 @@ set(SOURCES
     src/PropertiesPanel.cpp
     src/CrosshairsOverlay.cpp
     src/CrosshairsEntity3D.cpp
+    src/Collection.cpp
+    src/SceneHierarchyPanel.cpp
 )
 
 set(HEADERS
@@ -48,6 +50,8 @@ set(HEADERS
     include/PropertiesPanel.h
     include/CrosshairsOverlay.h
     include/CrosshairsEntity3D.h
+    include/Collection.h
+    include/SceneHierarchyPanel.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
