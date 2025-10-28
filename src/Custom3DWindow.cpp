@@ -9,7 +9,7 @@ Custom3DWindow::Custom3DWindow(QScreen *screen)
     , m_shiftPressed(false)
     , m_orbiting(false)
     , m_panning(false)
-    , m_firstInteraction(true)
+    , m_flyMode(false)
 {
     // Enable mouse tracking to get move events even without buttons pressed
     setMouseGrabEnabled(true);
@@ -55,15 +55,18 @@ void Custom3DWindow::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
+    // Fly mode mouse look (always active when in fly mode)
+    if (m_flyMode) {
+        QPoint delta = event->pos() - m_lastMousePos;
+        emit mouseLookRequested(delta.x(), delta.y());
+        m_lastMousePos = event->pos();
+        event->accept();
+        return;
+    }
+
+    // Orbit/Pan mode (middle mouse button)
     if (m_middlePressed && (m_orbiting || m_panning)) {
-        // On first interaction, set delta to zero to avoid initial jump
-        QPoint delta;
-        if (m_firstInteraction) {
-            delta = QPoint(0, 0);
-            m_firstInteraction = false;
-        } else {
-            delta = event->pos() - m_lastMousePos;
-        }
+        QPoint delta = event->pos() - m_lastMousePos;
 
         if (m_orbiting) {
             emit orbitRequested(delta.x(), delta.y());
@@ -110,4 +113,33 @@ void Custom3DWindow::wheelEvent(QWheelEvent *event)
     float delta = event->angleDelta().y() / 120.0f;
     emit zoomRequested(delta);
     event->accept();
+}
+
+void Custom3DWindow::keyPressEvent(QKeyEvent *event)
+{
+    // Handle backtick key (grave accent) for fly mode toggle
+    if (event->key() == Qt::Key_QuoteLeft && !event->isAutoRepeat()) {
+        emit flyModeToggleRequested();
+        event->accept();
+        return;
+    }
+
+    // Emit key press for other keys (movement keys handled by ViewportController)
+    if (!event->isAutoRepeat()) {
+        emit keyPressed(event->key());
+    }
+
+    // Let base class handle the event too
+    Qt3DExtras::Qt3DWindow::keyPressEvent(event);
+}
+
+void Custom3DWindow::keyReleaseEvent(QKeyEvent *event)
+{
+    // Emit key release
+    if (!event->isAutoRepeat()) {
+        emit keyReleased(event->key());
+    }
+
+    // Let base class handle the event too
+    Qt3DExtras::Qt3DWindow::keyReleaseEvent(event);
 }

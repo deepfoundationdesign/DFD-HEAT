@@ -26,9 +26,17 @@ ViewportController::ViewportController(Qt3DRender::QCamera *camera, QObject *par
     , m_mousePressed(false)
     , m_middleMousePressed(false)
     , m_activeButton(Qt::NoButton)
+    , m_flyModeActive(false)
+    , m_flySpeed(5.0f)  // 5 units per second
+    , m_flyMouseSensitivity(0.15f)
+    , m_yaw(45.0f)
+    , m_pitch(35.264f)
+    , m_flyPosition(10, 10, 10)
 {
-    qDebug() << "[ViewportController] Initialized with spherical coords for camera at (10, 10, 10):";
-    qDebug() << "  radius=" << m_radius << "azimuth=" << m_azimuth << "° elevation=" << m_elevation << "°";
+    // Setup fly mode timer for continuous movement
+    m_flyModeTimer = new QTimer(this);
+    m_flyModeTimer->setInterval(16);  // ~60 FPS
+    connect(m_flyModeTimer, &QTimer::timeout, this, &ViewportController::updateFlyCamera);
 
     if (m_camera) {
         updateCameraPosition();
@@ -62,7 +70,6 @@ void ViewportController::orbit(const QPoint &pos)
     if (!m_mousePressed || !m_camera) return;
 
     QPoint delta = pos - m_lastMousePos;
-    qDebug() << "[ViewportController::orbit] pos=" << pos << "lastPos=" << m_lastMousePos << "delta=" << delta;
 
     // Blender-style orbit (horizontal and vertical)
     m_azimuth -= delta.x() * m_orbitSpeed * m_settings->orbitSensitivity();
@@ -86,7 +93,6 @@ void ViewportController::pan(const QPoint &pos)
     if (!m_middleMousePressed || !m_camera) return;
 
     QPoint delta = pos - m_lastMousePos;
-    qDebug() << "[ViewportController::pan] pos=" << pos << "lastPos=" << m_lastMousePos << "delta=" << delta;
 
     // Apply pan deltas (X inverted, Y normal for natural panning)
     float deltaX = -delta.x() * m_panSpeed * m_settings->panSensitivity();
@@ -112,15 +118,10 @@ void ViewportController::zoom(float delta)
 {
     if (!m_camera) return;
 
-    qDebug() << "[ViewportController::zoom] delta=" << delta;
-    qDebug() << "  Old radius:" << m_radius;
-
     // Blender-style zoom (scroll up = zoom in, scroll down = zoom out)
     float zoomFactor = 1.0f - (delta * m_zoomSpeed * m_settings->zoomSensitivity());
     m_radius *= zoomFactor;
     m_radius = qBound(0.1f, m_radius, 1000.0f);
-
-    qDebug() << "  New radius:" << m_radius << "(zoom factor:" << zoomFactor << ")";
 
     updateCameraPosition();
 }
@@ -185,13 +186,6 @@ void ViewportController::updateCameraPosition()
 {
     if (!m_camera) return;
 
-    // DEBUG: Log camera state before update
-    QVector3D oldPos = m_camera->position();
-    qDebug() << "[ViewportController] updateCameraPosition() called";
-    qDebug() << "  Current camera position:" << oldPos;
-    qDebug() << "  Spherical coords: radius=" << m_radius
-             << "azimuth=" << m_azimuth << "° elevation=" << m_elevation << "°";
-
     // Convert spherical to Cartesian coordinates
     float azimuthRad = qDegreesToRadians(m_azimuth);
     float elevationRad = qDegreesToRadians(m_elevation);
@@ -201,12 +195,6 @@ void ViewportController::updateCameraPosition()
     float z = m_radius * qCos(elevationRad) * qCos(azimuthRad);
 
     QVector3D cameraPos = m_target + QVector3D(x, y, z);
-
-    // DEBUG: Log new position and delta
-    QVector3D delta = cameraPos - oldPos;
-    qDebug() << "  Calculated new position:" << cameraPos;
-    qDebug() << "  Delta (movement):" << delta;
-    qDebug() << "  Delta magnitude:" << delta.length();
 
     m_camera->setPosition(cameraPos);
     m_camera->setViewCenter(m_target);
@@ -268,4 +256,133 @@ QVector3D ViewportController::screenToWorld(const QPoint &screenPos)
 {
     // TODO: Implement screen to world coordinate conversion
     return QVector3D();
+}
+
+void ViewportController::toggleFlyMode()
+{
+    m_flyModeActive = !m_flyModeActive;
+
+    if (m_flyModeActive) {
+        // Initialize fly mode from current camera position
+        m_flyPosition = m_camera->position();
+
+        // Calculate initial yaw and pitch from current camera orientation
+        QVector3D forward = (m_camera->viewCenter() - m_camera->position()).normalized();
+        m_yaw = qRadiansToDegrees(qAtan2(forward.x(), forward.z()));
+        m_pitch = qRadiansToDegrees(qAsin(-forward.y()));
+
+        // Start the update timer
+        m_flyModeTimer->start();
+
+    } else {
+        // Stop the update timer
+        m_flyModeTimer->stop();
+
+        // Clear pressed keys
+        m_pressedKeys.clear();
+
+        // Return to orbit mode - recalculate spherical coordinates from current position
+        QVector3D pos = m_camera->position();
+        QVector3D target = m_camera->viewCenter();
+
+        m_target = target;
+        QVector3D offset = pos - target;
+        m_radius = offset.length();
+
+        if (m_radius > 0.001f) {
+            m_azimuth = qRadiansToDegrees(qAtan2(offset.x(), offset.z()));
+            m_elevation = qRadiansToDegrees(qAsin(offset.y() / m_radius));
+        }
+    }
+
+    emit flyModeToggled(m_flyModeActive);
+}
+
+void ViewportController::handleKeyPress(int key)
+{
+    if (!m_flyModeActive) return;
+
+    m_pressedKeys.insert(key);
+}
+
+void ViewportController::handleKeyRelease(int key)
+{
+    if (!m_flyModeActive) return;
+
+    m_pressedKeys.remove(key);
+}
+
+void ViewportController::handleMouseLook(int deltaX, int deltaY)
+{
+    if (!m_flyModeActive || !m_camera) return;
+
+    // Update yaw (horizontal) and pitch (vertical)
+    m_yaw -= deltaX * m_flyMouseSensitivity;
+    m_pitch += deltaY * m_flyMouseSensitivity;
+
+    // Clamp pitch to prevent camera flipping
+    m_pitch = qBound(-89.0f, m_pitch, 89.0f);
+
+    // Normalize yaw to 0-360 range
+    while (m_yaw < 0.0f) m_yaw += 360.0f;
+    while (m_yaw >= 360.0f) m_yaw -= 360.0f;
+}
+
+void ViewportController::updateFlyCamera()
+{
+    if (!m_flyModeActive || !m_camera) return;
+
+    // Calculate movement delta based on time
+    float deltaTime = m_flyModeTimer->interval() / 1000.0f;  // Convert ms to seconds
+    float moveAmount = m_flySpeed * deltaTime;
+
+    // Calculate camera direction vectors
+    float yawRad = qDegreesToRadians(m_yaw);
+    float pitchRad = qDegreesToRadians(m_pitch);
+
+    // Forward vector (direction camera is looking)
+    QVector3D forward(
+        qSin(yawRad) * qCos(pitchRad),
+        -qSin(pitchRad),
+        qCos(yawRad) * qCos(pitchRad)
+    );
+    forward.normalize();
+
+    // Right vector (perpendicular to forward, for strafing)
+    QVector3D right = QVector3D::crossProduct(forward, QVector3D(0, 1, 0)).normalized();
+
+    // World up vector (for Q/E)
+    QVector3D worldUp(0, 1, 0);
+
+    // Process movement based on pressed keys
+    if (m_pressedKeys.contains(Qt::Key_W)) {
+        m_flyPosition += forward * moveAmount;
+    }
+    if (m_pressedKeys.contains(Qt::Key_S)) {
+        m_flyPosition -= forward * moveAmount;
+    }
+    if (m_pressedKeys.contains(Qt::Key_A)) {
+        m_flyPosition -= right * moveAmount;
+    }
+    if (m_pressedKeys.contains(Qt::Key_D)) {
+        m_flyPosition += right * moveAmount;
+    }
+    if (m_pressedKeys.contains(Qt::Key_E)) {
+        m_flyPosition += worldUp * moveAmount;  // Up along world Y-axis
+    }
+    if (m_pressedKeys.contains(Qt::Key_Q)) {
+        m_flyPosition -= worldUp * moveAmount;  // Down along world Y-axis
+    }
+
+    // Update camera position
+    m_camera->setPosition(m_flyPosition);
+
+    // Update camera view center (where it's looking)
+    QVector3D viewCenter = m_flyPosition + forward;
+    m_camera->setViewCenter(viewCenter);
+
+    // Keep up vector as world up
+    m_camera->setUpVector(QVector3D(0, 1, 0));
+
+    emit cameraChanged();
 }

@@ -9,6 +9,7 @@
 #include "SelectionManager.h"
 #include "SceneObject.h"
 #include "BoxObject.h"
+#include "CrosshairsOverlay.h"
 
 #include <Qt3DCore/QTransform>
 #include <Qt3DRender/QCamera>
@@ -27,6 +28,7 @@ Viewport3D::Viewport3D(QWidget *parent)
     , m_controller(std::make_unique<ViewportController>(m_view->camera()))
     , m_grid(nullptr)
     , m_axis(nullptr)
+    , m_crosshairs(nullptr)
 {
     // Create container widget for our custom Qt3D window
     QWidget *container = QWidget::createWindowContainer(m_view);
@@ -34,12 +36,29 @@ Viewport3D::Viewport3D(QWidget *parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(container);
 
+    // Create crosshairs overlay on top of 3D view
+    m_crosshairs = new CrosshairsOverlay(container);
+    m_crosshairs->setGeometry(container->rect());
+    m_crosshairs->raise();  // Ensure it's on top
+
     m_view->setRootEntity(m_rootEntity);
 
     // Connect our custom window's signals to our controller
     connect(m_view, &Custom3DWindow::orbitRequested, this, &Viewport3D::onOrbitRequested);
     connect(m_view, &Custom3DWindow::panRequested, this, &Viewport3D::onPanRequested);
     connect(m_view, &Custom3DWindow::zoomRequested, this, &Viewport3D::onZoomRequested);
+
+    // Connect fly mode signals
+    connect(m_view, &Custom3DWindow::flyModeToggleRequested, m_controller.get(), &ViewportController::toggleFlyMode);
+    connect(m_view, &Custom3DWindow::keyPressed, m_controller.get(), &ViewportController::handleKeyPress);
+    connect(m_view, &Custom3DWindow::keyReleased, m_controller.get(), &ViewportController::handleKeyRelease);
+    connect(m_view, &Custom3DWindow::mouseLookRequested, m_controller.get(), &ViewportController::handleMouseLook);
+
+    // Update Custom3DWindow fly mode state when controller toggles it
+    connect(m_controller.get(), &ViewportController::flyModeToggled, m_view, &Custom3DWindow::setFlyMode);
+
+    // Update crosshairs visibility when fly mode toggles
+    connect(m_controller.get(), &ViewportController::flyModeToggled, this, &Viewport3D::onFlyModeToggled);
 
     setupScene();
 }
@@ -257,4 +276,11 @@ void Viewport3D::onObjectAdded(SceneObject* object)
     // Connect the object's clicked signal to our handler
     connect(object, &SceneObject::clicked, this, &Viewport3D::onObjectClicked);
     qDebug() << "Connected click handler for object:" << object->name();
+}
+
+void Viewport3D::onFlyModeToggled(bool active)
+{
+    if (m_crosshairs) {
+        m_crosshairs->setVisible(active);
+    }
 }

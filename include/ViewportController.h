@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QVector3D>
 #include <QPoint>
+#include <QSet>
+#include <QTimer>
 #include <memory>
 
 namespace Qt3DRender {
@@ -57,15 +59,24 @@ public:
 
     ViewportSettings* settings() const { return m_settings.get(); }
 
+    // Fly mode controls
+    void toggleFlyMode();
+    bool isFlyModeActive() const { return m_flyModeActive; }
+    void handleKeyPress(int key);
+    void handleKeyRelease(int key);
+    void handleMouseLook(int deltaX, int deltaY);
+
 signals:
     void navigationModeChanged(NavigationMode mode);
     void cameraChanged();
+    void flyModeToggled(bool active);
 
 public:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     void updateCameraPosition();
+    void updateFlyCamera();  // Update camera for fly mode
     QVector3D screenToWorld(const QPoint &screenPos);
 
     Qt3DRender::QCamera *m_camera;
@@ -88,6 +99,18 @@ private:
     bool m_mousePressed;
     bool m_middleMousePressed;
     Qt::MouseButton m_activeButton;
+
+    // Fly mode state
+    bool m_flyModeActive;
+    QSet<int> m_pressedKeys;  // Track currently pressed keys
+    QTimer *m_flyModeTimer;   // Timer for continuous movement
+    float m_flySpeed;         // Movement speed in units/second
+    float m_flyMouseSensitivity; // Mouse look sensitivity
+
+    // Fly mode camera orientation (first-person)
+    float m_yaw;   // Horizontal rotation (around Y axis)
+    float m_pitch; // Vertical rotation (look up/down)
+    QVector3D m_flyPosition; // Direct camera position in fly mode
 };
 
 #endif // VIEWPORTCONTROLLER_H

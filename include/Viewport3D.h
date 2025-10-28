@@ -18,6 +18,7 @@ class ModeManager;
 class ObjectManager;
 class SelectionManager;
 class SceneObject;
+class CrosshairsOverlay;
 
 class Viewport3D : public QWidget
 {
@@ -54,6 +55,7 @@ private slots:
     void onZoomRequested(float delta);
     void onObjectClicked(SceneObject* object);
     void onObjectAdded(SceneObject* object);
+    void onFlyModeToggled(bool active);
 
 private:
     void setupScene();
@@ -73,6 +75,7 @@ private:
 
     GridEntity *m_grid;
     AxisEntity *m_axis;
+    CrosshairsOverlay *m_crosshairs;
 };
 
 #endif // VIEWPORT3D_H
